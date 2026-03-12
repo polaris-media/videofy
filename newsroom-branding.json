@@ -48,6 +48,11 @@
             "icon": "#f2f5f5"
           }
         },
+        "progress": {
+          "placement": "left",
+          "gap": 20,
+          "shape": "circle"
+        },
         "outroCard": {
           "duration": 6,
           "backgroundColor": "#021831",

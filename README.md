@@ -12,6 +12,20 @@ This repository is designed to run on a laptop with OpenAI credentials, and supp
 
 Found a problem or want to chat about the project? Open an issue or join our [Discord server](https://discord.gg/vFvvdC3B)
 
+## Polaris Media Extensions
+
+This repository now also includes Polaris Media-specific extensions on top of the open source Schibsted base:
+
+- Polaris article import through CAPI
+- support for all Polaris newsrooms discovered from Polaris newsroom metadata
+- article lookup from `collections/v1/{newsroom}/articles`
+- automatic newsroom detection from Polaris article URLs
+- newsroom-specific branding through `newsroom-branding.json` and the CMS theme editor
+- Stream/SVP video browsing and import inside the editor
+- local Norwegian narration fallback on macOS when ElevenLabs is not configured
+
+These additions make the Polaris fetcher and Polaris newsroom branding the primary workflow for Polaris environments.
+
 ## What It Does
 
 Videofy Minimal takes content from a source such as Reuters, AP, or a test web URL, builds a manuscript, matches media, generates voiceover, and renders a video.
@@ -177,7 +191,7 @@ Each fetcher lives under `fetchers/<id>/` and defines:
 In production, each brand/newsroom should build a proper fetcher integration against its own content APIs to get the highest quality data. 
 
 Included fetchers:
-- `polaris-capi`: shown when `CAPI_USERNAME` + `CAPI_PASSWORD` are set. Supports Polaris article URL/ID import, newsroom dropdown, and latest-article lookup from Polaris CAPI collections. Newsrooms are resolved dynamically from Polaris newsroom metadata.
+- `polaris-capi`: shown when `CAPI_USERNAME` + `CAPI_PASSWORD` are set. Supports Polaris article URL/ID import, newsroom dropdown, and latest-article lookup from Polaris CAPI collections. Newsrooms are resolved dynamically from Polaris newsroom metadata, so all supported Polaris newsrooms are available without hardcoding a short allowlist.
 - `web`: generic HTML fetcher for local testing and demos
 - `reuters`: shown only when Reuters API credentials are set
 - `ap`: shown only when AP credentials are set
@@ -197,7 +211,9 @@ If you only have a raw article ID, you can select the newsroom from the dropdown
 The CMS also includes:
 - a newsroom dropdown populated from Polaris newsroom metadata
 - a `Hent siste artikler` helper that loads recent article IDs from `collections/v1/{newsroom}/articles`
-- article media import from CAPI plus Polaris image URLs and Stream/SVP video selection in the editor
+- article media import from CAPI plus Polaris image URLs from `vcdn.polarismedia.no`
+- Stream/SVP video browsing and selection in `Replace -> Add media -> Video`
+- automatic project defaults for Polaris article workflows when CAPI credentials are present
 
 ## OpenAI Models
 
@@ -260,6 +276,14 @@ Typical newsroom overrides:
 - story progress layout and shape
 - outro card
 - advanced `player` overrides such as fonts, styles and background music
+
+For Polaris this means each newsroom can have its own:
+- logo and logo mode
+- progress indicator layout
+- colors and map marker color
+- intro/wipe/outro visibility
+- outro card content
+- advanced player JSON overrides
 
 Example:
 

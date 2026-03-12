@@ -589,7 +589,6 @@ const NewsroomThemeEditor = () => {
                       max={300}
                       step={5}
                       style={{ width: "100%" }}
-                      addonAfter="%"
                       placeholder="100"
                     />
                   </Form.Item>

@@ -86,6 +86,15 @@ const ArticleProgress: FC<Props> = ({ current, length, config }) => {
         const style: React.CSSProperties = {
           ...defaultStyle,
           ...progressStyle,
+          borderRadius,
+          height: `${itemSize}px`,
+          fontSize: `${fontSize}px`,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          alignSelf: "stretch",
+          textAlign: "center",
         };
         return (
           <span key={key} style={style}>

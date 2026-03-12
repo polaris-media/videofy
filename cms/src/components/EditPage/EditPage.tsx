@@ -292,7 +292,7 @@ const EditPage: FC<{ pageMode?: "editor" | "theme" }> = ({ pageMode = "editor" }
       initialValues={{ tabs, config }}
       layout="vertical"
       form={form}
-      component={isThemePage ? false : "form"}
+      component={isThemePage ? "div" : "form"}
     >
       <Flex vertical className="p-4">
         <Flex className="justify-between items-center py-2">
@@ -446,14 +446,16 @@ const EditPage: FC<{ pageMode?: "editor" | "theme" }> = ({ pageMode = "editor" }
           </div>
         </Flex>
       </Flex>
-      <AddFetchedArticle
-        open={state.openArticleModal}
-        setOpen={(open) => {
-          state.openArticleModal = open;
-        }}
-        brandId={state.brandId}
-        onChange={handleAddArticle}
-      />
+      {state.openArticleModal && !isThemePage ? (
+        <AddFetchedArticle
+          open={state.openArticleModal}
+          setOpen={(open) => {
+            state.openArticleModal = open;
+          }}
+          brandId={state.brandId}
+          onChange={handleAddArticle}
+        />
+      ) : null}
     </Form>
   );
 };
