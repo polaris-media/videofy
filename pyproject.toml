@@ -1,0 +1,40 @@
+[project]
+name = "videofy-minimal"
+version = "0.2.0"
+description = "Self-contained minimal Videofy API"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.135.1,<0.136",
+  "uvicorn>=0.41.0,<0.42",
+  "python-multipart>=0.0.22,<0.0.23",
+  "pydantic>=2.10.0,<3",
+  "pydantic-settings>=2.7.0,<3",
+  "openai>=2.24.0,<3",
+  "elevenlabs>=2.38.0,<3",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.0.2,<10",
+  "pytest-cov>=7.0.0,<8",
+  "httpx>=0.28.0,<0.29",
+]
+hotspot = [
+  "albumentations>=2.0.8,<3",
+  "numpy>=2.4.2,<3",
+  "pillow>=12.1.1,<13",
+  "timm>=1.0.0,<2",
+  "torch>=2.10.0,<3",
+  "transformers>=5.3.0,<6",
+]
+
+[tool.uv]
+package = false
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

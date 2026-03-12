@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="180" viewBox="0 0 360 180" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">VS logo</title>
+  <desc id="desc">A clean semi-transparent VS wordmark for Videofy Minimal.</desc>
+  <defs>
+    <linearGradient id="vs-fade" x1="0" y1="0" x2="360" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="white" stop-opacity="0.58"/>
+      <stop offset="50%" stop-color="white" stop-opacity="0.82"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0.58"/>
+    </linearGradient>
+  </defs>
+  <text
+    x="180"
+    y="124"
+    text-anchor="middle"
+    font-family="'Iowan Old Style', 'Baskerville', 'Times New Roman', serif"
+    font-size="174"
+    font-style="italic"
+    font-weight="600"
+    letter-spacing="9"
+    fill="url(#vs-fade)"
+    stroke="white"
+    stroke-opacity="0.12"
+    stroke-width="0.7"
+  >
+    VS
+  </text>
+</svg>

@@ -1,0 +1,67 @@
+{
+  "default": {
+    "disableIntro": true,
+    "disableWipe": true,
+    "disableOutro": true,
+    "logoStyle": "position: absolute; top: 48px; right: 48px; width: 72px;",
+    "logoTextStyle": "position: absolute; top: 46px; right: 40px; padding: 10px 14px; border-radius: 999px; background: rgba(0, 0, 0, 0.78); color: #fff; font-size: 32px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;"
+  },
+  "newsrooms": {
+    "fvn": {
+      "domain": "www.fvn.no",
+      "image": "https://vcdn.polarismedia.no/mm-img/a4ff9e4c900d31e6ca198c1fd51a3667/640",
+      "text": "FVN",
+      "logoMode": "image",
+      "logoStyle": "position: absolute; top: 40px; right: 40px; width: 88px; filter: drop-shadow(0 10px 24px rgba(10, 11, 11, 0.16));",
+      "player": {
+        "styles": {
+          "all": {
+            "progress": {
+              "active": "border-radius: 0px; box-shadow: 0 12px 30px rgba(10, 11, 11, 0.12);",
+              "inactive": "border-radius: 0px; box-shadow: 0 8px 20px rgba(10, 11, 11, 0.08);"
+            },
+            "map": {
+              "labelContainer": "background: var(--summary-bg, rgba(255, 255, 255, 0.94)); color: var(--summary-title, #0a0b0b); border-radius: 0px; box-shadow: 0 18px 42px rgba(10, 11, 11, 0.16);",
+              "labelText": "color: var(--summary-title, #0a0b0b); font-weight: 700; letter-spacing: -0.02em;"
+            },
+            "photoCredits": {
+              "container": "background: rgba(10, 11, 11, 0.56); padding: 10px 8px; border-radius: 999px;",
+              "text": "font-size: 24px; font-weight: 500;"
+            }
+          }
+        },
+        "colors": {
+          "progress": {
+            "active": {
+              "background": "var(--color-primary, #6db8c6)"
+            },
+            "inactive": {
+              "background": "#789ce2",
+              "text": "var(--summary-title, #0a0b0b)"
+            }
+          },
+          "map": {
+            "marker": "var(--color-primary, #6db8c6)"
+          },
+          "fotoCredits": {
+            "text": "#f2f5f5",
+            "icon": "#f2f5f5"
+          }
+        },
+        "outroCard": {
+          "duration": 6,
+          "backgroundColor": "#021831",
+          "logoScalePercent": 150,
+          "title": "Les mer på fvn.no",
+          "body": "Det du trenger å vite, alltid!"
+        }
+      }
+    },
+    "adresseavisen": {
+      "domain": "www.adressa.no"
+    },
+    "smpno": {
+      "domain": "www.smp.no"
+    }
+  }
+}

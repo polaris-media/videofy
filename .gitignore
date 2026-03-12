@@ -1,0 +1,29 @@
+.DS_Store
+
+# Local env/secrets
+.env
+.envrc
+**/.env.local
+**/.env.*.local
+
+# Python
+.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Node / Next / build outputs
+node_modules/
+**/node_modules/
+cms/.next/
+cms/tsconfig.tsbuildinfo
+**/*.tsbuildinfo
+dist/
+build/
+coverage/
+
+# Local project runtime artifacts
+projects/*
+!projects/.project-structure/
+!projects/.project-structure/**

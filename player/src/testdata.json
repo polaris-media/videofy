@@ -1,0 +1,97 @@
+[
+  {
+    "manuscripts": [
+      {
+        "meta": {
+          "title": "Sample Render Input",
+          "pubdate": "2026-01-01T12:00:00Z",
+          "byline": "Videofy Minimal",
+          "id": 1,
+          "uniqueId": "sample-render-input-1",
+          "description": "Neutral sample test data",
+          "audio": {
+            "src": "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp3"
+          }
+        },
+        "segments": [
+          {
+            "id": 1,
+            "mood": "neutral",
+            "type": "segment",
+            "style": "bottom",
+            "texts": [
+              {
+                "type": "text",
+                "text": "This is neutral sample data for local rendering.",
+                "line_id": 1,
+                "who": "default",
+                "start": 0,
+                "end": 3.5
+              }
+            ],
+            "cameraMovement": "zoom-in",
+            "images": [
+              {
+                "type": "image",
+                "byline": "Sample",
+                "imageAsset": {
+                  "id": "sample-image-1",
+                  "size": {
+                    "width": 1920,
+                    "height": 1080
+                  }
+                },
+                "url": "https://picsum.photos/id/1015/1920/1080",
+                "hotspot": {
+                  "x": 420,
+                  "y": 220,
+                  "width": 1080,
+                  "height": 620,
+                  "x_norm": 0.2188,
+                  "y_norm": 0.2037,
+                  "width_norm": 0.5625,
+                  "height_norm": 0.5741
+                }
+              }
+            ],
+            "start": 0,
+            "end": 3.5
+          }
+        ]
+      }
+    ],
+    "playerConfig": {
+      "assetBaseUrl": ".",
+      "logo": "logo.svg",
+      "logoStyle": "position: absolute; top: 90px; right: 65px;",
+      "colors": {
+        "text": {
+          "text": "#fff",
+          "background": "#DD0000"
+        },
+        "progress": {
+          "active": {
+            "background": "#DD0000",
+            "text": "#fff"
+          },
+          "inactive": {
+            "background": "#000",
+            "text": "#fff"
+          }
+        },
+        "map": {
+          "marker": "#DD0000"
+        },
+        "fotoCredits": {
+          "text": "#CACACA",
+          "icon": "#CACACA"
+        }
+      },
+      "backgroundMusicVolume": 1
+    },
+    "type": "Vertical",
+    "voice": true,
+    "backgroundMusic": true,
+    "disabledLogo": false
+  }
+]

@@ -1,0 +1,40 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      APP_BASE_URL: http://localhost:8001
+      PROJECTS_ROOT: projects
+      CONFIG_ROOT: brands
+      CORS_ALLOW_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./projects:/app/projects
+      - ./brands:/app/brands
+      - ./brand_assets:/app/brand_assets
+      - ./intro_outro_wipes:/app/intro_outro_wipes
+      - ./fetchers:/app/fetchers
+
+  cms:
+    build:
+      context: .
+      dockerfile: cms/Dockerfile
+    environment:
+      MINIMAL_DATA_API_URL: http://api:8001
+      MINIMAL_FILE_BASE_URL: http://localhost:8001
+      NEXT_PUBLIC_CMS_BASE_URL: http://localhost:3000
+      CAPI_USERNAME: ${CAPI_USERNAME:-}
+      CAPI_PASSWORD: ${CAPI_PASSWORD:-}
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./projects:/app/projects
+      - ./brands:/app/brands
+      - ./brand_assets:/app/brand_assets
+      - ./intro_outro_wipes:/app/intro_outro_wipes

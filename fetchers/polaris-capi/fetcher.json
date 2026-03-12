@@ -1,0 +1,44 @@
+{
+  "id": "polaris-capi",
+  "title": "Polaris-artikkel",
+  "order": 1,
+  "description": "Importer en Polaris-artikkel fra CAPI. Lim inn artikkel-URL/artikkel-ID, eller skriv newsroom og hent en liste over siste artikler.",
+  "script": "fetcher.py",
+  "requiredEnv": [
+    "CAPI_USERNAME",
+    "CAPI_PASSWORD"
+  ],
+  "fields": [
+    {
+      "name": "article_ref",
+      "label": "Article URL / ID",
+      "required": true,
+      "placeholder": "https://www.fvn.no/... eller abc123"
+    },
+    {
+      "name": "newsroom",
+      "label": "Newsroom (valgfritt ved rå ID)",
+      "required": false,
+      "placeholder": "Settes automatisk fra URL-domene når mulig"
+    },
+    {
+      "name": "project_id",
+      "label": "Project ID (optional)",
+      "required": false,
+      "placeholder": "polaris-custom-project"
+    }
+  ],
+  "args": [
+    "{article_ref}"
+  ],
+  "optionalFlags": [
+    {
+      "field": "newsroom",
+      "flag": "--newsroom"
+    },
+    {
+      "field": "project_id",
+      "flag": "--project-id"
+    }
+  ]
+}

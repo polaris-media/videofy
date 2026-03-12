@@ -1,0 +1,12 @@
+{
+  "projectId": "demo",
+  "brandId": "default",
+  "promptPack": "default",
+  "voicePack": "default",
+  "options": {
+    "orientationDefault": "vertical",
+    "segmentPauseSeconds": 0.4
+  },
+  "createdAt": "2026-03-02T00:00:00+00:00",
+  "updatedAt": "2026-03-02T00:00:00+00:00"
+}

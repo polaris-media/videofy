@@ -1,0 +1,1 @@
+"""Minimal Videofy application package."""

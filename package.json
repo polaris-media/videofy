@@ -1,0 +1,14 @@
+{
+  "name": "videofy-minimal-workspace",
+  "private": true,
+  "workspaces": [
+    "cms",
+    "player",
+    "types"
+  ],
+  "scripts": {
+    "dev:cms": "npm run dev -w @videofy/cms",
+    "build:cms": "npm run build -w @videofy/cms",
+    "check-types:cms": "npm run check-types -w @videofy/cms"
+  }
+}

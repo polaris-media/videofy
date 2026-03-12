@@ -1,0 +1,18 @@
+{
+  "title": "Demo Article",
+  "byline": "Videofy Minimal",
+  "pubdate": "2026-01-01T12:00:00Z",
+  "text": "This is a local demo article for the minimal system. It demonstrates project-folder based ingestion, OpenAI summarization, ElevenLabs narration and local rendering.",
+  "script_lines": [
+    "This demo project is loaded directly from your local folder.",
+    "The script, audio and video are generated in a local pipeline.",
+    "You can edit assets, process narration and render a final video."
+  ],
+  "images": [
+    {
+      "path": "images/placeholder.jpg",
+      "byline": "Local demo"
+    }
+  ],
+  "videos": []
+}

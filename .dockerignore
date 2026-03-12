@@ -1,0 +1,11 @@
+.git
+.gitignore
+.venv
+node_modules
+cms/.next
+player/node_modules
+types/node_modules
+__pycache__
+*.pyc
+.DS_Store
+

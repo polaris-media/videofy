@@ -1,0 +1,37 @@
+{
+  "id": "reuters",
+  "title": "Reuters Item",
+  "order": 30,
+  "description": "Import Reuters metadata and download the best available video rendition.",
+  "script": "fetcher.py",
+  "requiredEnv": [
+    "REUTERS_CLIENT_ID",
+    "REUTERS_CLIENT_SECRET",
+    "REUTERS_AUDIENCE",
+    "REUTERS_GRANT_TYPE",
+    "REUTERS_SCOPE"
+  ],
+  "fields": [
+    {
+      "name": "item_id",
+      "label": "Reuters Item ID or URL",
+      "required": true,
+      "placeholder": "tag:reuters.com,2024:newsml_RW625531102024RP1:4"
+    },
+    {
+      "name": "project_id",
+      "label": "Project ID (optional)",
+      "required": false,
+      "placeholder": "reuters-custom-project"
+    }
+  ],
+  "args": [
+    "{item_id}"
+  ],
+  "optionalFlags": [
+    {
+      "field": "project_id",
+      "flag": "--project-id"
+    }
+  ]
+}

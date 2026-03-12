@@ -1,0 +1,30 @@
+{
+  "id": "web",
+  "title": "Web URL",
+  "order": 10,
+  "description": "Import article text and media directly from a public web URL.",
+  "script": "fetcher.py",
+  "fields": [
+    {
+      "name": "url",
+      "label": "Article URL",
+      "required": true,
+      "placeholder": "https://www.vg.no/nyheter/i/8pQxeA/..."
+    },
+    {
+      "name": "project_id",
+      "label": "Project ID (optional)",
+      "required": false,
+      "placeholder": "web-custom-project"
+    }
+  ],
+  "args": [
+    "{url}"
+  ],
+  "optionalFlags": [
+    {
+      "field": "project_id",
+      "flag": "--project-id"
+    }
+  ]
+}

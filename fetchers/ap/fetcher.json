@@ -1,0 +1,33 @@
+{
+  "id": "ap",
+  "title": "AP Video Hub",
+  "order": 20,
+  "description": "Import AP metadata and download the selected AP video.",
+  "script": "fetcher.py",
+  "requiredEnv": [
+    "AP_API_KEY"
+  ],
+  "fields": [
+    {
+      "name": "content_id",
+      "label": "AP Content ID or URL",
+      "required": true,
+      "placeholder": "2d22fd4637ba4eab9432ce847f7f9e24"
+    },
+    {
+      "name": "project_id",
+      "label": "Project ID (optional)",
+      "required": false,
+      "placeholder": "ap-custom-project"
+    }
+  ],
+  "args": [
+    "{content_id}"
+  ],
+  "optionalFlags": [
+    {
+      "field": "project_id",
+      "flag": "--project-id"
+    }
+  ]
+}

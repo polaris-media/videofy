@@ -1,0 +1,35 @@
+{
+  "name": "@videofy/player",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tsup": "^8.5.1"
+  },
+  "dependencies": {
+    "@remotion/animation-utils": "^4.0.433",
+    "@remotion/google-fonts": "^4.0.433",
+    "@remotion/player": "^4.0.433",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.433",
+    "typescript": "^5.9.3"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-musl": "^4.59.0"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "example",
+  "title": "Example Fetcher",
+  "order": 100,
+  "description": "Template for a new fetcher plugin.",
+  "script": "fetcher.py",
+  "hidden": true,
+  "fields": [
+    {
+      "name": "input_id",
+      "label": "Input ID",
+      "required": true,
+      "placeholder": "abc123"
+    },
+    {
+      "name": "project_id",
+      "label": "Project ID (optional)",
+      "required": false,
+      "placeholder": "example-project"
+    }
+  ],
+  "args": [
+    "{input_id}"
+  ],
+  "optionalFlags": [
+    {
+      "field": "project_id",
+      "flag": "--project-id"
+    }
+  ]
+}

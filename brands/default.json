@@ -1,0 +1,87 @@
+{
+  "brand_name": "Default",
+  "openai": {
+    "manuscriptModel": "gpt-4o",
+    "mediaModel": "gpt-4o"
+  },
+  "options": {
+    "segmentPauseSeconds": 0.4
+  },
+  "exportDefaults": {
+    "exportType": "Vertical",
+    "logo": true,
+    "audio": true,
+    "voice": true,
+    "music": true
+  },
+  "people": {
+    "default": {
+      "voice": "h9K1sOblwDPp0OVDDPUJ",
+      "model_id": "eleven_turbo_v2_5",
+      "stability": 0.5,
+      "similarity_boost": 0.8,
+      "style": 0,
+      "use_speaker_boost": true
+    }
+  },
+  "prompts": {
+    "scriptPrompt": "You are a journalist writing voice scripts for SoMe videos summarising the daily news. You will receive a news article in the user input. Lets do this step by step: \n 1: Read the article and understand what the article is about \n 2: Note the key points that are important for the reader to undersand. What is new, surprising or interesting? \n 3: Summarize these points in a way that is factual, but also engaging and informative. Go straigt to the content of the article, no welcome/padding text. \n 4: The script should be in Norwegian and consist of no more than 3 lines of text. Each line should give the readers new and relevant information about the article. \n 5: The last line should offer some form of completion or conclusion to the article. Make sure that all major perspectives are corectly represented in the script.\n 6: Then rewrite each line so it is a gramatically correct, punchy and engaging sentence of max 12 words. Make sure the sentence uses simple words so it is easy to read for the voice actor. \n 7: Do not include encodings or special characters that can not be pronounced by the voice actor.",
+    "placementPrompt": "You are a movie director creating a short video clip from an article on a news site. The article contains videos, images and maps that can be used to create the video clip. You receive a numbered list of script lines and a numbered list of visual items (videos, maps and images) extracted from the article. Let's do this step by step: \n 1. Read the metadata for each item and place the items for each text line to best support the final video clip. Videos should be prioritized. \n 2. Always prioritize including video items if they are present in the list. \n 3. Pay attention to the item caption or description to try to match the person, place or activity mentioned in the text. \n 4. Place map items on the same line that mentions the location of the news event. \n 5. You do not have to use all the items, but you should use at least one item for each line in the script. \n 6. Do not use the same item for more than one line. \n 7. Only use the same item for multiple lines if there are fewer items than lines, or if they do not fit the story. \n 8. Remember to prioritize videos",
+    "describeImagesPrompt": "You are a helpful assistant. You are given a set of images from a news article in the user input. Describe briefly and factual what is on the image. Describe the scene, persons, mood etc. Suggest what kind of activity or event that might be happening in the image."
+  },
+  "player": {
+    "logo": "/api/brand-assets/brand_assets/vs-logo.svg",
+    "logoStyle": "position: absolute; top: 90px; right: 65px;",
+    "defaultCameraMovements": [
+      "zoom-in",
+      "pan-right",
+      "zoom-in",
+      "pan-left",
+      "zoom-in",
+      "zoom-out"
+    ],
+    "colors": {
+      "text": {
+        "background": "#2C4FE3",
+        "text": "#fff"
+      },
+      "progress": {
+        "active": {
+          "background": "#2C4FE3",
+          "text": "#fff"
+        },
+        "inactive": {
+          "background": "#000",
+          "text": "#fff"
+        }
+      },
+      "map": {
+        "marker": "#2C4FE3"
+      },
+      "fotoCredits": {
+        "text": "#CACACA",
+        "icon": "#CACACA"
+      }
+    },
+    "backgroundMusicVolume": 1,
+    "backgroundMusic": "https://static.vg.no/videofy/background-music/dark-mektig.mp3",
+    "intro": {
+      "portrait": "/api/brand-assets/intro_outro_wipes/intro.webm",
+      "landscape": "/api/brand-assets/intro_outro_wipes/intro.webm",
+      "duration": 3,
+      "offset": -0.88
+    },
+    "wipe": {
+      "portrait": "/api/brand-assets/intro_outro_wipes/wipes/wipe-portrait.webm",
+      "landscape": "/api/brand-assets/intro_outro_wipes/wipes/wipe-portrait.webm",
+      "duration": 1.6,
+      "offset": -0.76
+    },
+    "outro": {
+      "portrait": "/api/brand-assets/intro_outro_wipes/outro.webm",
+      "landscape": "/api/brand-assets/intro_outro_wipes/outro.webm",
+      "duration": 3,
+      "offset": -0.76
+    }
+  }
+}
