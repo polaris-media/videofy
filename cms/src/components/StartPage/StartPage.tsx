@@ -548,14 +548,6 @@ const StartPage = ({ initialNewsroom }: { initialNewsroom?: string }) => {
 
           await saveProjectConfig(fetchResult.projectId, customizedConfig);
 
-          if (!primaryProject) {
-            primaryProject = {
-              id: fetchResult.projectId,
-              name: fetchResult.projectId,
-            };
-            primaryConfigRow = { ...configRow, config: customizedConfig };
-          }
-
           state.loadingMessage = `Generating ${targetIndex + 1}/${fetchTargets.length}...`;
           const manuscript = await generateProjectManuscript(fetchResult.projectId);
 
@@ -575,6 +567,14 @@ const StartPage = ({ initialNewsroom }: { initialNewsroom?: string }) => {
               },
             },
           });
+
+          if (!primaryProject) {
+            primaryProject = {
+              id: fetchResult.projectId,
+              name: fetchResult.projectId,
+            };
+            primaryConfigRow = { ...configRow, config: customizedConfig };
+          }
         } catch (error) {
           console.error(`[start-page] Failed to fetch target '${fetchLabel}':`, error);
           failedTargets.push(fetchLabel);
