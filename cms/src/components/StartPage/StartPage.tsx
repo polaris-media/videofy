@@ -47,6 +47,7 @@ import {
   parseArticleRefInput,
   parseArticleRefsInput,
 } from "@/lib/polarisArticleInputs";
+import { randomId } from "@/lib/randomId";
 
 const { Title, Paragraph } = Typography;
 const cookies = new Cookies();
@@ -570,7 +571,7 @@ const StartPage = ({ initialNewsroom }: { initialNewsroom?: string }) => {
               meta: {
                 ...manuscript.meta,
                 articleUrl: fetchResult.projectId,
-                uniqueId: crypto.randomUUID(),
+                uniqueId: randomId(),
               },
             },
           });

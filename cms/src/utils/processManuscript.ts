@@ -12,6 +12,7 @@ import {
   importRemoteVideoToProject,
   isProjectVideoUrl,
 } from "@/lib/importRemoteVideo";
+import { randomId } from "@/lib/randomId";
 
 const FALLBACK_IMAGE_SIZE = {
   width: 1080,
@@ -316,7 +317,7 @@ function toBackendManuscript(
       byline: manuscript.meta.byline,
       pubdate: manuscript.meta.pubdate,
       id: 1,
-      uniqueId: manuscript.meta.uniqueId || crypto.randomUUID(),
+      uniqueId: manuscript.meta.uniqueId || randomId(),
       audio: {},
     },
     segments: manuscript.segments.map((segment, segmentIndex) => {
@@ -456,7 +457,7 @@ function mapBackendMediaToProcessedMedia(media: BackendMedia) {
 
   if (media.type === "video") {
     const fallbackVideoAsset = {
-      id: media.path || crypto.randomUUID(),
+      id: media.path || randomId(),
       title: media.path || "video",
       streamUrls: {
         mp4: media.url,
@@ -486,7 +487,7 @@ function mapBackendMediaToProcessedMedia(media: BackendMedia) {
         : undefined,
     hotspot: normalizeHotspot(media.hotspot),
     imageAsset: media.imageAsset || {
-      id: media.path || crypto.randomUUID(),
+      id: media.path || randomId(),
       size: FALLBACK_IMAGE_SIZE,
     },
   };

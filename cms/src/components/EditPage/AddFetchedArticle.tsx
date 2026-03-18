@@ -17,6 +17,7 @@ import {
   parseArticleRefInput,
   parseArticleRefsInput,
 } from "@/lib/polarisArticleInputs";
+import { randomId } from "@/lib/randomId";
 
 type FormType = {
   fetcherId: string;
@@ -197,7 +198,7 @@ const AddFetchedArticle: FC<AddFetchedArticleProps> = ({
             meta: {
               ...manuscript.meta,
               articleUrl: fetchResult.projectId,
-              uniqueId: crypto.randomUUID(),
+              uniqueId: randomId(),
             },
           };
 

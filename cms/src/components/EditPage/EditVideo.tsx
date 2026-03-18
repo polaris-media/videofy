@@ -5,6 +5,7 @@ import React, { FC, useEffect, useMemo } from "react";
 import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 import ReplaceMedia from "./ReplaceMedia";
 import SvpVideoPicker from "./SvpVideoPicker";
+import { randomId } from "@/lib/randomId";
 import { useGlobalState } from "@/state/globalState";
 
 function convertToSeconds(timeStr: string): number {
@@ -159,7 +160,7 @@ const EditVideo = ({
       type: "video",
       url: videoUrl,
       videoAsset: {
-        id: crypto.randomUUID(),
+        id: randomId(),
         title: "Local video",
         streamUrls: {
           mp4: videoUrl,
