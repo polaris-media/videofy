@@ -17,6 +17,7 @@ const nominatimItemSchema = z.object({
 const responseSchema = z.array(nominatimItemSchema);
 
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
+const EXTERNAL_FETCH_TIMEOUT_MS = 10_000;
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -47,6 +48,7 @@ export async function GET(request: Request) {
         "User-Agent": "videofy-minimal-cms/1.0 (maps)",
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(EXTERNAL_FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -72,7 +74,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
 
-    return NextResponse.json({ error: toErrorMessage(error) }, { status: 500 });
+    const message =
+      error instanceof Error && error.name === "AbortError"
+        ? `Timed out while searching map locations after ${EXTERNAL_FETCH_TIMEOUT_MS}ms`
+        : toErrorMessage(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

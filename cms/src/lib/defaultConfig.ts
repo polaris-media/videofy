@@ -44,6 +44,65 @@ export const buildDefaultConfig = (projectId: string): Config => ({
     logo: "/assets/logo.svg",
     assetBaseUrl:
       process.env.NEXT_PUBLIC_CMS_BASE_URL || "http://127.0.0.1:3000",
+    logoStyle: "position: absolute; top: 88px; right: 52px; width: 78px; opacity: 0.6;",
+    progress: {
+      placement: "left",
+      offsetX: 42,
+      offsetYPortrait: 1010,
+      size: 56,
+      gap: 10,
+      shape: "circle",
+    },
+    styles: {
+      portrait: {
+        captions: {
+          container: "left: 88px; right: 88px;",
+          text:
+            "font-family: 'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif; font-weight: 700; font-size: 56px; line-height: 1.15; border-radius: 10px; padding: 8px 18px; background: #1c1e57; color: #ffffff;",
+          placements: {
+            top: "top: 14%;",
+            middle: "top: 50%; transform: translateY(-50%);",
+            bottom: "bottom: 13%;",
+          },
+        },
+        progress: {
+          active:
+            "font-family: 'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif; font-weight: 700;",
+          inactive:
+            "font-family: 'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif; font-weight: 700;",
+        },
+        photoCredits: {
+          variant: "badge",
+          showIcon: false,
+          container: "left: 42px; top: 88px; background: rgba(28, 30, 87, 0.92);",
+          text:
+            "font-family: 'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif; font-size: 22px; font-weight: 600;",
+        },
+      },
+    },
+    colors: {
+      text: {
+        background: "#1c1e57",
+        text: "#ffffff",
+      },
+      progress: {
+        active: {
+          background: "#1c1e57",
+          text: "#ffffff",
+        },
+        inactive: {
+          background: "rgba(0, 0, 0, 0.72)",
+          text: "#ffffff",
+        },
+      },
+      map: {
+        marker: "#1c1e57",
+      },
+      fotoCredits: {
+        text: "#ffffff",
+        icon: "#ffffff",
+      },
+    },
   },
   default_assets_base_url: `/projects/${projectId}/files/input`,
   exportDefaults: {

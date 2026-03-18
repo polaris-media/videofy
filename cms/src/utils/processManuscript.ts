@@ -7,7 +7,7 @@ import type {
   ProcessedManuscript,
 } from "@videofy/types";
 import { processedManuscriptSchema } from "@videofy/types";
-import { getDataApiUrl } from "@/lib/backend";
+import { createJob, getJob } from "@/lib/jobsApi";
 import {
   importRemoteVideoToProject,
   isProjectVideoUrl,
@@ -18,6 +18,7 @@ const FALLBACK_IMAGE_SIZE = {
   height: 1080,
 };
 const PROCESS_TIMEOUT_MS = 180_000;
+const JOB_POLL_INTERVAL_MS = 1_000;
 
 const parsePronunciationText = (text: string): [string, string] => {
   const displayText = text.replace(/\s*\[[^\]]+\]/g, "");
@@ -31,6 +32,7 @@ type BackendMedia = {
   url?: string;
   byline?: string | null;
   description?: string | null;
+  displayMode?: "cover" | "contain-blur" | null;
   location?: {
     lat: number;
     lon: number;
@@ -79,6 +81,11 @@ type BackendSegment = {
   mood: string;
   style: string;
   cameraMovement: string;
+  durationOverrideSeconds?: number;
+  customAudio?: {
+    src?: string;
+    length?: number;
+  };
   start?: number;
   end?: number;
   texts: Array<{
@@ -292,6 +299,7 @@ function mapFrontendMediaToBackendMedia(
     url: media.url,
     byline: media.byline,
     description: media.description,
+    displayMode: media.displayMode,
     hotspot: media.hotspot,
     imageAsset: media.imageAsset,
   };
@@ -327,6 +335,8 @@ function toBackendManuscript(
         mood: segment.mood,
         style: segment.style,
         cameraMovement: segment.cameraMovement,
+        durationOverrideSeconds: segment.durationOverrideSeconds,
+        customAudio: segment.customAudio,
         texts,
         images: backendImages,
       };
@@ -470,6 +480,10 @@ function mapBackendMediaToProcessedMedia(media: BackendMedia) {
     url: media.url || "",
     byline: toDefinedString(media.byline),
     description: toDefinedString(media.description),
+    displayMode:
+      media.displayMode === "contain-blur" || media.displayMode === "cover"
+        ? media.displayMode
+        : undefined,
     hotspot: normalizeHotspot(media.hotspot),
     imageAsset: media.imageAsset || {
       id: media.path || crypto.randomUUID(),
@@ -496,6 +510,14 @@ function backendToProcessed(
         | "upbeat",
       type: "segment",
       style: segment.style as "top" | "middle" | "bottom",
+      durationOverrideSeconds: toDefinedNumber(segment.durationOverrideSeconds),
+      customAudio:
+        segment.customAudio?.src || segment.customAudio?.length !== undefined
+          ? {
+              src: toDefinedString(segment.customAudio?.src),
+              length: toDefinedNumber(segment.customAudio?.length),
+            }
+          : undefined,
       cameraMovement: segment.cameraMovement as
         | "none"
         | "pan-left"
@@ -548,30 +570,53 @@ interface Args {
   abortController?: AbortController;
   projectId: string;
   backendGenerationId?: string;
+  audioMode?: "none" | "elevenlabs";
 }
 
 export const processManuscript = async ({
   manuscript,
   projectId,
-  backendGenerationId,
+  audioMode = "elevenlabs",
 }: Args): Promise<ProcessedManuscript> => {
-  const processUrl = `${getDataApiUrl()}/api/projects/${projectId}/process`;
   const localizedManuscript = await localizeRemoteVideos(manuscript, projectId);
   const backendPayload = toBackendManuscript(projectId, localizedManuscript);
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), PROCESS_TIMEOUT_MS);
-  let response: Response;
   try {
-    response = await fetch(processUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        generation_id: backendGenerationId,
+    const job = await createJob({
+      kind: "process-manuscript",
+      payload: {
+        projectId,
         manuscript: backendPayload,
-      }),
-      cache: "no-store",
-      signal: abortController.signal,
+        audioMode,
+      },
     });
+
+    while (true) {
+      if (abortController.signal.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
+
+      const snapshot = await getJob<{ processed_json?: BackendManuscript }>(job.jobId);
+
+      if (snapshot.status === "failed") {
+        throw new Error(snapshot.error || `Process failed for project ${projectId}`);
+      }
+
+      if (snapshot.status === "completed") {
+        const payload = snapshot.result;
+        if (!payload?.processed_json) {
+          console.error(
+            `[cms.process] Missing processed_json in job result for project '${projectId}'`
+          );
+          throw new Error("Backend did not return processed_json");
+        }
+
+        return backendToProcessed(payload.processed_json, projectId);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, JOB_POLL_INTERVAL_MS));
+    }
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error(
@@ -582,22 +627,4 @@ export const processManuscript = async ({
   } finally {
     clearTimeout(timeoutId);
   }
-
-  if (!response.ok) {
-    const responseBody = await response.text();
-    console.error(
-      `[cms.process] Process request failed for project '${projectId}': ${responseBody}`
-    );
-    throw new Error(`Process failed for project ${projectId} (${response.status}): ${responseBody}`);
-  }
-
-  const payload = (await response.json()) as { processed_json?: BackendManuscript };
-  if (!payload.processed_json) {
-    console.error(
-      `[cms.process] Missing processed_json in backend response for project '${projectId}'`
-    );
-    throw new Error("Backend did not return processed_json");
-  }
-
-  return backendToProcessed(payload.processed_json, projectId);
 };

@@ -2,6 +2,7 @@ import { mkdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
+import { getProjectStorage } from "@/lib/projectStorage";
 
 export type RenderOrientation = "vertical" | "horizontal";
 
@@ -13,6 +14,11 @@ type RenderInput = {
   voice: boolean;
   backgroundMusic: boolean;
   disabledLogo: boolean;
+  outputFileName?: string;
+  storyIndicator?: {
+    length: number;
+    current: number;
+  };
 };
 
 let bundlePromise: Promise<string> | undefined;
@@ -22,8 +28,16 @@ function resolveEntryPoint(): string {
   return path.join(process.cwd(), "..", "player", "src", "studio-index.ts");
 }
 
-export function getOutputFilePath(projectId: string, orientation: RenderOrientation): string {
-  return path.join(process.cwd(), "..", "projects", projectId, "output", `render-${orientation}.mp4`);
+export function getOutputFilePath(
+  projectId: string,
+  orientation: RenderOrientation,
+  outputFileName?: string
+): string {
+  return getProjectStorage().resolveProjectPath(
+    projectId,
+    "output",
+    outputFileName || `render-${orientation}.mp4`
+  );
 }
 
 export async function getServeUrl(): Promise<string> {
@@ -55,6 +69,7 @@ export async function renderProjectVideo(input: RenderInput): Promise<string> {
     voice: input.voice,
     backgroundMusic: input.backgroundMusic,
     disabledLogo: input.disabledLogo,
+    storyIndicator: input.storyIndicator,
   };
 
   const serveUrl = await getServeUrl();
@@ -64,7 +79,11 @@ export async function renderProjectVideo(input: RenderInput): Promise<string> {
     inputProps,
   });
 
-  const outputFile = getOutputFilePath(input.projectId, input.orientation);
+  const outputFile = getOutputFilePath(
+    input.projectId,
+    input.orientation,
+    input.outputFileName
+  );
   await mkdir(path.dirname(outputFile), { recursive: true });
   const tempOutputFile = outputFile.replace(/\.mp4$/, `.${Date.now()}.rendering.mp4`);
 

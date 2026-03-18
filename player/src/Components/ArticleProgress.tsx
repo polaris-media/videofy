@@ -43,7 +43,7 @@ const ArticleProgress: FC<Props> = ({ current, length, config }) => {
     justifyContent: "center",
     alignItems: "center",
     gap: `${gap}px`,
-    zIndex: 0,
+    zIndex: 2,
   };
 
   return (

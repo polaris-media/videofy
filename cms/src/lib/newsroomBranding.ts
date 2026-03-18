@@ -1,4 +1,5 @@
-import { readJson, newsroomBrandingPath, projectDir } from "@/lib/projectFiles";
+import { readJson, newsroomBrandingPath } from "@/lib/projectFiles";
+import { getProjectStorage } from "@/lib/projectStorage";
 
 export type NewsroomBrandingEntry = {
   domain?: string;
@@ -112,8 +113,9 @@ export async function readNewsroomBrandingFile(): Promise<NewsroomBrandingFile> 
 }
 
 export async function detectProjectNewsroom(projectId: string): Promise<string | undefined> {
-  const source = await readJson<PolarisSourcePayload | null>(
-    `${projectDir(projectId)}/working/polaris_capi_source.json`,
+  const source = await getProjectStorage().readProjectJson<PolarisSourcePayload | null>(
+    projectId,
+    "working/polaris_capi_source.json",
     null
   );
 
@@ -124,8 +126,9 @@ export async function resolveNewsroomBranding(
   projectId: string
 ): Promise<ResolvedNewsroomBranding | null> {
   const brandingFile = await readNewsroomBrandingFile();
-  const source = await readJson<PolarisSourcePayload | null>(
-    `${projectDir(projectId)}/working/polaris_capi_source.json`,
+  const source = await getProjectStorage().readProjectJson<PolarisSourcePayload | null>(
+    projectId,
+    "working/polaris_capi_source.json",
     null
   );
 

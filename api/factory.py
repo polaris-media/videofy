@@ -16,6 +16,7 @@ from .pipeline import PipelineService
 from .project_store import ProjectStore
 from .settings import Settings, get_settings
 from .tts_service import CompositeTTSService, ElevenLabsService, MacOSSayTTSService
+from .usage_tracker import UsageTracker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -25,23 +26,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     store = ProjectStore(settings.projects_root_abs)
     resolver = ConfigResolver(settings.config_root_abs)
-    llm = LLMService(api_key=settings.openai_api_key, model=settings.openai_model)
-    tts = CompositeTTSService(
-        providers=[
+    usage_tracker = UsageTracker(store=store)
+    llm = LLMService(
+        api_key=settings.openai_api_key,
+        model=settings.openai_model,
+        usage_tracker=usage_tracker,
+    )
+    providers = []
+    if settings.elevenlabs_api_key.strip():
+        providers.append(
             ElevenLabsService(
                 api_key=settings.elevenlabs_api_key,
+                base_url=settings.elevenlabs_base_url,
                 voice_id="",
                 ffprobe_bin=settings.ffprobe_bin,
                 ffmpeg_bin=settings.ffmpeg_bin,
-            ),
+            )
+        )
+    else:
+        providers.append(
             MacOSSayTTSService(
                 enabled=settings.local_tts_enabled,
                 voice_name=settings.local_tts_voice,
                 speech_rate=settings.local_tts_rate,
                 ffprobe_bin=settings.ffprobe_bin,
                 ffmpeg_bin=settings.ffmpeg_bin,
-            ),
-        ],
+            )
+        )
+
+    tts = CompositeTTSService(
+        providers=providers,
         ffprobe_bin=settings.ffprobe_bin,
         ffmpeg_bin=settings.ffmpeg_bin,
     )
@@ -59,6 +73,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         tts_service=tts,
         config_resolver=resolver,
         asset_analysis_service=asset_analysis,
+        usage_tracker=usage_tracker,
     )
 
     app_state = AppState(

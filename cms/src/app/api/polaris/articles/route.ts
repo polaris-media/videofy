@@ -28,6 +28,7 @@ type CollectionItem = z.infer<typeof collectionItemSchema>;
 
 const COLLECTIONS_BASE_URL = "https://content.api.plan3.se/collections/v1";
 const ENTITIES_BASE_URL = "https://content.api.plan3.se/entities/v1";
+const EXTERNAL_FETCH_TIMEOUT_MS = 10_000;
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -83,13 +84,20 @@ async function fetchCollectionItems(
   newsroom: string,
   authHeader: string
 ): Promise<z.infer<typeof collectionResponseSchema>> {
-  const response = await fetch(`${COLLECTIONS_BASE_URL}/${newsroom}/articles`, {
+  const url = new URL(`${COLLECTIONS_BASE_URL}/${newsroom}/articles`);
+  url.searchParams.set("source.id", "!");
+  url.searchParams.set("characteristics.hotness", "20..100");
+  url.searchParams.set("sort", "PUBLISHED");
+  url.searchParams.set("size", "20");
+
+  const response = await fetch(url, {
     method: "GET",
     headers: {
       Accept: "application/json",
       Authorization: authHeader,
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(EXTERNAL_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -117,6 +125,7 @@ async function fetchArticleTitle(
           Authorization: authHeader,
         },
         cache: "no-store",
+        signal: AbortSignal.timeout(EXTERNAL_FETCH_TIMEOUT_MS),
       }
     );
 
@@ -157,6 +166,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
 
-    return NextResponse.json({ error: toErrorMessage(error) }, { status: 500 });
+    const message =
+      error instanceof Error && error.name === "AbortError"
+        ? `Timed out while fetching Polaris articles after ${EXTERNAL_FETCH_TIMEOUT_MS}ms`
+        : toErrorMessage(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

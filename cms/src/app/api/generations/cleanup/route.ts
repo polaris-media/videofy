@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { readdir, rm, unlink } from "node:fs/promises";
-import { join } from "node:path";
 import { z } from "zod";
 import {
   cmsGenerationPath,
-  projectDir,
   readJson,
   writeJson,
 } from "@/lib/projectFiles";
+import { getProjectStorage } from "@/lib/projectStorage";
 
 const projectIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
 
@@ -174,24 +172,14 @@ async function listProjectFiles(
   projectId: string,
   relativeDir: string
 ): Promise<string[]> {
-  const absoluteDir = join(projectDir(projectId), relativeDir);
-  const entries = await readdir(absoluteDir, { withFileTypes: true }).catch(() => []);
-
-  return entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => `${relativeDir}/${entry.name}`);
+  return getProjectStorage().listProjectFiles(projectId, relativeDir);
 }
 
 async function deleteFileIfExists(
   projectId: string,
   relativePath: string
 ): Promise<boolean> {
-  try {
-    await unlink(join(projectDir(projectId), relativePath));
-    return true;
-  } catch {
-    return false;
-  }
+  return getProjectStorage().deleteProjectFile(projectId, relativePath);
 }
 
 async function cleanupProjectFiles(
@@ -218,6 +206,27 @@ async function cleanupProjectFiles(
     if (await deleteFileIfExists(projectId, renderFile)) {
       deletedFiles += 1;
       deletedRenderFiles += 1;
+    }
+  }
+
+  for (const transientDir of [
+    "working/audio",
+    "working/analysis",
+    "working/analysis/frames",
+    "output",
+  ]) {
+    const files = await listProjectFiles(projectId, transientDir);
+    for (const file of files) {
+      if (referencedFiles.has(file)) {
+        continue;
+      }
+
+      if (await deleteFileIfExists(projectId, file)) {
+        deletedFiles += 1;
+        if (/^output\/render-.*\.mp4$/i.test(file)) {
+          deletedRenderFiles += 1;
+        }
+      }
     }
   }
 
@@ -274,7 +283,7 @@ export async function POST(request: Request) {
         continue;
       }
 
-      await rm(projectDir(retiredProjectId), { recursive: true, force: true });
+      await getProjectStorage().deleteProjectTree(retiredProjectId);
       deletedProjects.push(retiredProjectId);
     }
 
@@ -282,8 +291,11 @@ export async function POST(request: Request) {
       const remainingRetiredProjectIds = retiredProjectIds.filter(
         (projectId) => !deletedProjects.includes(projectId)
       );
+      const { config: _legacyConfig, ...sanitizedExisting } = existing as GenerationRecord & {
+        config?: unknown;
+      };
       await writeJson(cmsGenerationPath(body.generationId), {
-        ...existing,
+        ...sanitizedExisting,
         retiredProjectIds:
           remainingRetiredProjectIds.length > 0
             ? remainingRetiredProjectIds

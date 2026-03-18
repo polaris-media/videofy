@@ -158,13 +158,13 @@ const EditPage: FC<{ pageMode?: "editor" | "theme" }> = ({ pageMode = "editor" }
     return nextTabs;
   };
 
-  const handleAddArticle = async (tab: Tab) => {
+  const handleAddArticle = async (newTabs: Tab[]) => {
     const currentTabs = (form.getFieldValue("tabs") || []) as Tab[];
-    const nextTabs = [...currentTabs, tab];
+    const nextTabs = [...currentTabs, ...newTabs];
     await persistTabs(nextTabs);
     form.setFieldValue("tabs", nextTabs);
     setTabs(nextTabs);
-    state.selectedTab = tab.manuscript.meta.uniqueId;
+    state.selectedTab = newTabs[newTabs.length - 1]?.manuscript.meta.uniqueId;
   };
 
   const handleReorderArticles = async (from: number, to: number) => {

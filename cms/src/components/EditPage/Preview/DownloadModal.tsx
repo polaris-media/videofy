@@ -21,6 +21,7 @@ import { type FC, useMemo } from "react";
 import { useReactive } from "ahooks";
 import { useGlobalState } from "@/state/globalState";
 import { logAIData } from "@/actions/logAIData";
+import { createJob, getJob } from "@/lib/jobsApi";
 
 const videoTypes = [
   {
@@ -66,8 +67,20 @@ type FormType = {
   audio: boolean;
   voice: boolean;
   music: boolean;
+  splitArticles: boolean;
   title: string;
 };
+
+type RenderDownload = {
+  kind?: "combined" | "article";
+  orientation: "vertical" | "horizontal";
+  downloadUrl: string;
+  articleIndex?: number;
+  articleTitle?: string;
+};
+
+const JOB_POLL_INTERVAL_MS = 1_000;
+const RENDER_TIMEOUT_MS = 10 * 60 * 1000;
 
 const DownloadModal: FC<Props> = ({ open, setOpen }) => {
   const { tabs, processedManuscripts, generationId } = useGlobalState();
@@ -79,7 +92,7 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
 
   const state = useReactive({
     isProcessing: false,
-    downloads: [] as Array<{ orientation: "vertical" | "horizontal"; downloadUrl: string }>,
+    downloads: [] as RenderDownload[],
     error: undefined as string | undefined,
   });
 
@@ -116,8 +129,10 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
     Form.useWatch("exportType", downloadForm) || defaultExportType;
   const watchedAudio = Form.useWatch("audio", downloadForm);
   const audioEnabled = watchedAudio ?? defaultAudioEnabled;
+  const splitArticlesEnabled = Form.useWatch("splitArticles", downloadForm) ?? true;
   const isRenderableExport =
     selectedExportType !== "Videofy Project" && selectedExportType !== "Sound only";
+  const hasMultipleArticles = processedManuscripts.length > 1;
 
   const downloadAsJsonProject = (title: string) => {
     const data = {
@@ -166,31 +181,48 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
           : (["vertical"] as const);
 
     try {
-      const response = await fetch("/api/render/local", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const job = await createJob({
+        kind: "render-video",
+        payload: {
           projectId: generationId,
-          orientations,
+          orientations: [...orientations],
           manuscripts: processedManuscripts,
           playerConfig,
           voice: values.audio ? values.voice : false,
           backgroundMusic: values.audio ? values.music : false,
           disabledLogo: !values.logo,
-        }),
+          splitArticles: values.splitArticles,
+        },
       });
+      const startedAt = Date.now();
+      let payload:
+        | {
+            downloadUrl?: string;
+            downloads?: RenderDownload[];
+          }
+        | undefined;
 
-      if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`Render failed (${response.status}): ${body}`);
+      while (Date.now() - startedAt < RENDER_TIMEOUT_MS) {
+        const snapshot = await getJob<{
+          downloadUrl?: string;
+          downloads?: RenderDownload[];
+        }>(job.jobId);
+
+        if (snapshot.status === "failed") {
+          throw new Error(snapshot.error || "Render job failed");
+        }
+
+        if (snapshot.status === "completed") {
+          payload = snapshot.result;
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, JOB_POLL_INTERVAL_MS));
       }
 
-      const payload = (await response.json()) as {
-        downloadUrl?: string;
-        downloads?: Array<{ orientation: "vertical" | "horizontal"; downloadUrl: string }>;
-      };
+      if (!payload) {
+        throw new Error(`Render timed out after ${RENDER_TIMEOUT_MS}ms`);
+      }
 
       if (!payload.downloads?.length && !payload.downloadUrl) {
         throw new Error("Render finished but no download URL was returned.");
@@ -201,6 +233,7 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
           ? payload.downloads
           : [
               {
+                kind: "combined",
                 orientation: orientations[0],
                 downloadUrl: payload.downloadUrl!,
               },
@@ -254,6 +287,15 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
     return state.downloads.length > 0 ? "Render again" : "Render video";
   })();
 
+  const getDownloadLabel = (download: RenderDownload) => {
+    const orientationLabel = download.orientation === "vertical" ? "9:16" : "16:9";
+    if (download.kind === "article") {
+      const articleNumber = String(download.articleIndex || 0).padStart(2, "0");
+      return `Download ${orientationLabel} article ${articleNumber}`;
+    }
+    return `Download ${orientationLabel} full story`;
+  };
+
   return (
     <Modal open={open} onCancel={() => setOpen(false)} footer={null} width={720}>
       <Typography.Title level={2} style={{ marginBottom: 8 }}>
@@ -284,8 +326,13 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
             config.exportDefaults?.music !== undefined
               ? config.exportDefaults.music
               : true,
+          splitArticles: true,
         }}
       >
+        <Form.Item name="exportType" hidden>
+          <Input />
+        </Form.Item>
+
         <Form.Item label="Export type" style={{ marginBottom: 20 }}>
           <div className="grid gap-3">
             {videoTypes.map((option) => {
@@ -295,7 +342,7 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
                   key={option.name}
                   type="button"
                   onClick={() => {
-                    downloadForm.setFieldValue("exportType", option.name);
+                    downloadForm.setFieldsValue({ exportType: option.name });
                     state.downloads = [];
                     state.error = undefined;
                   }}
@@ -348,12 +395,22 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
 
           {isRenderableExport ? (
             <>
+              {hasMultipleArticles && (
+                <Alert
+                  showIcon
+                  type="info"
+                  title="Multi-article export"
+                  description="You can export the full story only, or also generate one downloadable file per article."
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+
               {!hasNarrationAudio && (
                 <Alert
                   showIcon
                   type="info"
                   title="Voiceover er ikke tilgjengelig"
-                  description="Prosjektet er prosessert uten ElevenLabs. Preview og render kan fortsatt kjøres uten voiceover."
+                  description="Prosjektet er prosessert uten ElevenLabs. Preview og render kan fortsatt kjøres uten voiceover, men kjør 'Update with ElevenLabs' først hvis du vil ha voiceover med i eksporten."
                   style={{ marginBottom: 16 }}
                 />
               )}
@@ -409,6 +466,30 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
                     </Flex>
                   </Card>
                 </Col>
+                {hasMultipleArticles && (
+                  <Col xs={24} md={12}>
+                    <Card size="small">
+                      <Flex justify="space-between" align="center" gap="small">
+                        <div>
+                          <Typography.Text>Split per article</Typography.Text>
+                          <div>
+                            <Typography.Text type="secondary">
+                              Generate separate files for each article in the story
+                            </Typography.Text>
+                          </div>
+                        </div>
+                        <Form.Item name="splitArticles" valuePropName="checked" noStyle>
+                          <Switch
+                            onChange={() => {
+                              state.downloads = [];
+                              state.error = undefined;
+                            }}
+                          />
+                        </Form.Item>
+                      </Flex>
+                    </Card>
+                  </Col>
+                )}
               </Row>
             </>
           ) : null}
@@ -431,7 +512,11 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
             <Divider />
             <Card
               size="small"
-              title="Ready files"
+              title={
+                state.downloads.some((download) => download.kind === "article")
+                  ? "Ready files: full story + per article"
+                  : "Ready files"
+              }
               style={{
                 borderRadius: 16,
                 background: "rgba(255,255,255,0.03)",
@@ -441,22 +526,32 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
               <div className="grid gap-3">
                 {state.downloads.map((download) => (
                   <Button
-                    key={download.orientation}
+                    key={`${download.kind || "combined"}-${download.orientation}-${download.articleIndex || 0}`}
                     href={download.downloadUrl}
                     target="_blank"
                     rel="noreferrer"
                     type="default"
                     size="large"
                     block
-                    style={{ height: 46 }}
+                    style={{ height: "auto", minHeight: 46, paddingBlock: 10 }}
                   >
-                    {download.orientation === "vertical"
-                      ? "Download 9:16 video"
-                      : "Download 16:9 video"}
+                    <div>
+                      <div>{getDownloadLabel(download)}</div>
+                      {download.articleTitle ? (
+                        <div style={{ opacity: 0.75, fontSize: 12, marginTop: 4 }}>
+                          {download.articleTitle}
+                        </div>
+                      ) : null}
+                    </div>
                   </Button>
                 ))}
               </div>
             </Card>
+            {hasMultipleArticles && !splitArticlesEnabled ? (
+              <Typography.Paragraph type="secondary" style={{ marginTop: 12, marginBottom: 0 }}>
+                Per-article files are turned off for this export.
+              </Typography.Paragraph>
+            ) : null}
           </>
         ) : null}
 

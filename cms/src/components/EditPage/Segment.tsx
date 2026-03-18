@@ -7,13 +7,14 @@ import {
   Flex,
   Form,
   Input,
+  InputNumber,
   Row,
   Select,
   Tooltip,
 } from "antd";
 import { CopyOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { cameraMovements, moods, textPlacements } from "@/utils/constants";
-import { FC } from "react";
+import { FC, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import MediaAsset from "./MediaAsset";
@@ -52,12 +53,43 @@ const Segment: FC<SegmentProps> = ({
     width: "100%",
   };
   const form = Form.useFormInstance();
+  const durationOverridePath = [
+    "tabs",
+    manuscriptIndex,
+    "manuscript",
+    "segments",
+    position,
+    "durationOverrideSeconds",
+  ] as const;
+  const durationOverrideSeconds = Form.useWatch(durationOverridePath, form);
+  const mainMediaPath = [
+    "tabs",
+    manuscriptIndex,
+    "manuscript",
+    "segments",
+    position,
+    "mainMedia",
+  ] as const;
+  const mainMedia = Form.useWatch(mainMediaPath, form);
   const allMedia = form.getFieldValue([
     "tabs",
     manuscriptIndex,
     "manuscript",
     "media",
   ]);
+
+  useEffect(() => {
+    if (mainMedia?.type !== "map") {
+      return;
+    }
+
+    if (typeof durationOverrideSeconds === "number") {
+      return;
+    }
+
+    form.setFieldValue(durationOverridePath, 4);
+  }, [durationOverridePath, durationOverrideSeconds, form, mainMedia?.type]);
+
   return (
     <div ref={setNodeRef} style={style}>
       <Card key={id} className="w-full" classNames={{ body: "pb-0" }}>
@@ -93,7 +125,7 @@ const Segment: FC<SegmentProps> = ({
               </Col>
             </Row>
             <Row gutter={16}>
-              <Col span={8} key="mood">
+              <Col span={6} key="mood">
                 <Form.Item label="Mood" name={[position, "mood"]}>
                   <Select
                     options={moods.map((m) => ({
@@ -104,7 +136,7 @@ const Segment: FC<SegmentProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col span={8} key="cameraMovement">
+              <Col span={6} key="cameraMovement">
                 <Form.Item label="Camera" name={[position, "cameraMovement"]}>
                   <Select
                     options={cameraMovements.map((c) => ({
@@ -115,7 +147,7 @@ const Segment: FC<SegmentProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col span={8} key="placement">
+              <Col span={6} key="placement">
                 <Form.Item label="Placement" name={[position, "style"]}>
                   <Select
                     options={textPlacements.map((c) => ({
@@ -123,6 +155,31 @@ const Segment: FC<SegmentProps> = ({
                       label: c.name,
                     }))}
                     popupMatchSelectWidth={false}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={6} key="durationOverrideSeconds">
+                <Form.Item
+                  label="Duration (s)"
+                  tooltip="Optional total duration override for this segment. Map segments default to 4 seconds."
+                >
+                  <InputNumber
+                    value={
+                      typeof durationOverrideSeconds === "number"
+                        ? durationOverrideSeconds
+                        : undefined
+                    }
+                    min={0.1}
+                    step={0.1}
+                    precision={1}
+                    style={{ width: "100%" }}
+                    placeholder="Auto"
+                    onChange={(value) => {
+                      form.setFieldValue(
+                        durationOverridePath,
+                        typeof value === "number" ? value : undefined
+                      );
+                    }}
                   />
                 </Form.Item>
               </Col>

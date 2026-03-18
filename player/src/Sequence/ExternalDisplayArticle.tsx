@@ -52,9 +52,17 @@ function hasVisibleText(segment: Segment): boolean {
 function getSegmentDurationSeconds(segment: Segment, hasText: boolean): number {
   const primaryAsset = segment.images?.[0];
   const defaultDuration = segment.end - segment.start;
+  const overrideDuration =
+    typeof segment.durationOverrideSeconds === "number"
+      ? segment.durationOverrideSeconds
+      : undefined;
+
+  if (overrideDuration) {
+    return overrideDuration;
+  }
 
   if (segment.customAudio?.length) {
-    return segment.customAudio.length;
+    return Math.max(segment.customAudio.length, defaultDuration);
   }
 
   if (
@@ -182,7 +190,7 @@ export const ExternalDisplayArticle: FC<Props> = ({
                     segmentIndex,
                     defaultCameraMovements
                   )}
-                  durationInFrames={roundToNearestFrame(segment.end - segment.start)}
+                  durationInFrames={roundToNearestFrame(segmentDurationSeconds)}
                 />
               )}
 

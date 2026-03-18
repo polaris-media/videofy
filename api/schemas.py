@@ -105,6 +105,7 @@ class MediaAssetImage(BaseModel):
     path: str
     url: str
     byline: str | None = None
+    displayMode: Literal["cover", "contain-blur"] | None = None
     imageAsset: ImageAssetRef | None = None
     hotspot: Hotspot | None = None
     description: str | None = None
@@ -134,6 +135,11 @@ class MediaAssetMap(BaseModel):
     detailLevel: Literal["overview", "standard", "close"] | None = None
 
 
+class CustomAudio(BaseModel):
+    src: str | None = None
+    length: float | None = None
+
+
 class Segment(BaseModel):
     id: int
     mood: str = "neutral"
@@ -142,7 +148,9 @@ class Segment(BaseModel):
     cameraMovement: str = "none"
     texts: list[TextLine]
     text: str | None = None
+    durationOverrideSeconds: float | None = None
     images: list[MediaAssetImage | MediaAssetVideo | MediaAssetMap] = Field(default_factory=list)
+    customAudio: CustomAudio | None = None
     start: float | None = None
     end: float | None = None
 
@@ -171,6 +179,7 @@ class GenerateRequest(BaseModel):
 
 class ProcessRequest(BaseModel):
     manuscript: Manuscript | None = None
+    audio_mode: Literal["none", "elevenlabs"] = "elevenlabs"
 
 
 class GenerationResponse(BaseModel):

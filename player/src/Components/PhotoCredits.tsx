@@ -54,27 +54,52 @@ const PhotoCredits: FC<Props> = ({ byline, config }) => {
     "--icon-size": "30px",
     "--icon-color": config.colors?.fotoCredits?.icon || "white",
   };
+  const defaultBadgeContainerStyle: ExtendedCSSProperties = {
+    position: "absolute",
+    left: "65px",
+    top: "120px",
+    zIndex: 2,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 16px",
+    borderRadius: "999px",
+    background: "rgba(10, 16, 28, 0.72)",
+    color: config.colors?.fotoCredits?.text || "#fff",
+    "--icon-size": "18px",
+    "--icon-color": config.colors?.fotoCredits?.icon || "#fff",
+  };
 
   const defaultTextStyle: ExtendedCSSProperties = {
     textAlign: "center",
     fontSize: "26px",
     fontWeight: 400,
   };
+  const defaultBadgeTextStyle: ExtendedCSSProperties = {
+    fontSize: "24px",
+    fontWeight: 600,
+    lineHeight: 1,
+    whiteSpace: "nowrap",
+  };
+  const variant = configValue?.variant || "vertical";
+  const showIcon = variant === "vertical" ? true : (configValue?.showIcon ?? false);
 
   const containerStyle = {
-    ...defaultContainerStyle,
+    ...(variant === "badge" ? defaultBadgeContainerStyle : defaultContainerStyle),
     ...cssStringToReactStyle(configValue?.container),
   };
 
   const textStyle: ExtendedCSSProperties = {
-    ...defaultTextStyle,
+    ...(variant === "badge" ? defaultBadgeTextStyle : defaultTextStyle),
     ...cssStringToReactStyle(configValue?.text),
   };
   return (
     <div style={containerStyle}>
-      <div style={{ transform: "rotate(90deg)" }}>
-        <VideoGlyph color={config.colors?.fotoCredits?.icon || "white"} />
-      </div>
+      {showIcon ? (
+        <div style={variant === "badge" ? undefined : { transform: "rotate(90deg)" }}>
+          <VideoGlyph color={config.colors?.fotoCredits?.icon || "white"} />
+        </div>
+      ) : null}
       <span style={textStyle}>{byline}</span>
     </div>
   );

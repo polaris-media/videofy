@@ -1,5 +1,5 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
+import { getProjectStorage } from "@/lib/projectStorage";
 
 export type GenerationManifest = {
   projectId: string;
@@ -15,7 +15,7 @@ export type GenerationManifest = {
 };
 
 export function projectsRoot(): string {
-  return join(process.cwd(), "..", "projects");
+  return getProjectStorage().rootPath;
 }
 
 function assertSafeProjectId(projectId: string): string {
@@ -34,7 +34,22 @@ export function newsroomBrandingPath(): string {
 }
 
 export function projectDir(projectId: string): string {
-  return join(projectsRoot(), assertSafeProjectId(projectId));
+  return getProjectStorage().resolveProjectPath(assertSafeProjectId(projectId));
+}
+
+export function jobsRoot(): string {
+  return join(projectsRoot(), ".jobs");
+}
+
+export function jobFilePath(jobId: string): string {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(jobId)) {
+    throw new Error(`Invalid jobId: ${jobId}`);
+  }
+  return join(jobsRoot(), `${jobId}.json`);
+}
+
+export function jobWorkerLockPath(): string {
+  return join(jobsRoot(), "worker.lock.json");
 }
 
 export function generationManifestPath(projectId: string): string {
@@ -49,27 +64,18 @@ export function configOverridePath(projectId: string): string {
   return join(projectDir(projectId), "working", "config.override.json");
 }
 
+export function aiUsagePath(projectId: string): string {
+  return join(projectDir(projectId), "working", "ai-usage.json");
+}
+
 export async function listProjectIds(): Promise<string[]> {
-  const root = projectsRoot();
-  await mkdir(root, { recursive: true });
-  const entries = await readdir(root, { withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
-    .map((entry) => entry.name)
-    .sort();
+  return getProjectStorage().listProjectIds();
 }
 
 export async function readJson<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    const raw = await readFile(filePath, "utf-8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
+  return getProjectStorage().readJson(filePath, fallback);
 }
 
 export async function writeJson<T>(filePath: string, data: T): Promise<void> {
-  const dir = dirname(filePath);
-  await mkdir(dir, { recursive: true });
-  await writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+  await getProjectStorage().writeJson(filePath, data);
 }

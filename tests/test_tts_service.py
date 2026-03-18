@@ -16,8 +16,9 @@ class FakeTextToSpeechAPI:
 class FakeElevenLabsClient:
     last_instance = None
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, base_url: str | None = None):
         self.api_key = api_key
+        self.base_url = base_url
         self.text_to_speech = FakeTextToSpeechAPI()
         FakeElevenLabsClient.last_instance = self
 
@@ -43,6 +44,7 @@ def test_tts_service_calls_elevenlabs_convert_with_voice_id(monkeypatch, tmp_pat
 
     client = FakeElevenLabsClient.last_instance
     assert client is not None
+    assert client.base_url is None
     assert len(client.text_to_speech.calls) == 1
 
     payload = client.text_to_speech.calls[0]
@@ -52,6 +54,39 @@ def test_tts_service_calls_elevenlabs_convert_with_voice_id(monkeypatch, tmp_pat
     assert payload["output_format"] == "mp3_44100_128"
     assert "voice_settings" in payload
     assert out.read_bytes() == b"abc"
+
+
+def test_tts_service_uses_residency_base_url_from_api_key(monkeypatch):
+    monkeypatch.setattr(tts_module, "ElevenLabs", FakeElevenLabsClient)
+
+    service = tts_module.ElevenLabsService(
+        api_key="test_residency_eu",
+        voice_id="fallback-voice",
+        ffprobe_bin="ffprobe",
+        ffmpeg_bin="ffmpeg",
+    )
+
+    assert service.can_synthesize() is True
+    client = FakeElevenLabsClient.last_instance
+    assert client is not None
+    assert client.base_url == "https://api.eu.residency.elevenlabs.io"
+
+
+def test_tts_service_prefers_explicit_base_url(monkeypatch):
+    monkeypatch.setattr(tts_module, "ElevenLabs", FakeElevenLabsClient)
+
+    service = tts_module.ElevenLabsService(
+        api_key="test_residency_eu",
+        base_url="https://custom.elevenlabs.test",
+        voice_id="fallback-voice",
+        ffprobe_bin="ffprobe",
+        ffmpeg_bin="ffmpeg",
+    )
+
+    assert service.can_synthesize() is True
+    client = FakeElevenLabsClient.last_instance
+    assert client is not None
+    assert client.base_url == "https://custom.elevenlabs.test"
 
 
 def test_local_macos_tts_service_synthesizes_with_nora(monkeypatch, tmp_path: Path):

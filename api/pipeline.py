@@ -23,6 +23,7 @@ from .schemas import (
 )
 from .settings import Settings
 from .tts_service import TTSService
+from .usage_tracker import UsageTracker
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ class PipelineService:
         tts_service: TTSService,
         config_resolver: ConfigResolver,
         asset_analysis_service: AssetAnalysisService,
+        usage_tracker: UsageTracker | None = None,
     ):
         self.settings = settings
         self.store = store
@@ -65,9 +67,103 @@ class PipelineService:
         self.tts_service = tts_service
         self.config_resolver = config_resolver
         self.asset_analysis_service = asset_analysis_service
+        self.usage_tracker = usage_tracker
 
     def _asset_url(self, project_id: str, project_relative_path: str) -> str:
         return f"{self.settings.app_base_url}/projects/{project_id}/files/{project_relative_path}"
+
+    def _load_project_config_override(self, project_id: str) -> dict[str, Any]:
+        try:
+            override = self.store.load_json(project_id, "working/config.override.json")
+            if isinstance(override, dict):
+                return override
+        except ProjectStoreError:
+            pass
+
+        # Backward-compatible fallback for sessions created before config.override.json
+        # started being persisted separately from the CMS session record.
+        try:
+            generation = self.store.load_json(project_id, "working/cms-generation.json")
+        except ProjectStoreError:
+            return {}
+
+        if not isinstance(generation, dict):
+            return {}
+
+        config = generation.get("config")
+        return config if isinstance(config, dict) else {}
+
+    def _apply_project_config_override(
+        self,
+        project_id: str,
+        resolved_config: ResolvedConfig,
+    ) -> ResolvedConfig:
+        override = self._load_project_config_override(project_id)
+        if not override:
+            return resolved_config
+
+        openai_cfg = override.get("openai")
+        if isinstance(openai_cfg, dict):
+            manuscript_model = openai_cfg.get("manuscriptModel")
+            if isinstance(manuscript_model, str) and manuscript_model.strip():
+                resolved_config.manuscript_model = manuscript_model.strip()
+
+            media_model = openai_cfg.get("mediaModel")
+            if isinstance(media_model, str) and media_model.strip():
+                resolved_config.media_model = media_model.strip()
+
+        manuscript_cfg = override.get("manuscript")
+        if isinstance(manuscript_cfg, dict):
+            script_prompt = manuscript_cfg.get("script_prompt")
+            if isinstance(script_prompt, str) and script_prompt.strip():
+                resolved_config.script_prompt = script_prompt
+
+            placement_prompt = manuscript_cfg.get("placement_prompt")
+            if isinstance(placement_prompt, str) and placement_prompt.strip():
+                resolved_config.placement_prompt = placement_prompt
+
+            describe_images_prompt = manuscript_cfg.get("describe_images_prompt")
+            if isinstance(describe_images_prompt, str) and describe_images_prompt.strip():
+                resolved_config.describe_images_prompt = describe_images_prompt
+
+        people_cfg = override.get("people")
+        if isinstance(people_cfg, dict):
+            default_person = people_cfg.get("default")
+            if isinstance(default_person, dict):
+                voice_id = default_person.get("voice")
+                if isinstance(voice_id, str) and voice_id.strip():
+                    resolved_config.voice_id = voice_id.strip()
+
+                for key in ("stability", "similarity_boost", "style"):
+                    value = default_person.get(key)
+                    if isinstance(value, (int, float)):
+                        resolved_config.voice_settings[key] = value
+
+                use_speaker_boost = default_person.get("use_speaker_boost")
+                if isinstance(use_speaker_boost, bool):
+                    resolved_config.voice_settings["use_speaker_boost"] = use_speaker_boost
+
+        audio_cfg = override.get("audio")
+        if isinstance(audio_cfg, dict):
+            segment_pause = audio_cfg.get("segment_pause")
+            if isinstance(segment_pause, (int, float)):
+                resolved_config.segment_pause_seconds = float(segment_pause)
+
+        player_cfg = override.get("player")
+        if isinstance(player_cfg, dict):
+            resolved_config.player = {
+                **deepcopy(resolved_config.player),
+                **deepcopy(player_cfg),
+            }
+
+        export_defaults = override.get("exportDefaults")
+        if isinstance(export_defaults, dict):
+            resolved_config.export_defaults = {
+                **deepcopy(resolved_config.export_defaults),
+                **deepcopy(export_defaults),
+            }
+
+        return resolved_config
 
     def _normalize_input_asset_path(self, input_folder: str, provided_path: str) -> str:
         if provided_path.startswith("input/"):
@@ -78,6 +174,7 @@ class PipelineService:
 
     def _resolve_script_lines(
         self,
+        project_id: str,
         article: ArticleInput,
         resolved_config: ResolvedConfig,
         script_prompt_override: str | None,
@@ -97,6 +194,7 @@ class PipelineService:
             title=article.title,
             system_prompt=script_prompt,
             model_override=resolved_config.manuscript_model,
+            project_id=project_id,
         )
 
     def _build_analysis_input_assets(
@@ -348,6 +446,7 @@ class PipelineService:
         logger.info("[pipeline:%s] Step 1/7: Resolving config", project_id)
         generation_manifest = self.store.load_generation_manifest(project_id)
         resolved_config = self.config_resolver.resolve(generation_manifest)
+        resolved_config = self._apply_project_config_override(project_id, resolved_config)
         if isinstance(model_override, str) and model_override.strip():
             selected_model = model_override.strip()
             resolved_config.manuscript_model = selected_model
@@ -371,6 +470,7 @@ class PipelineService:
 
         logger.info("[pipeline:%s] Step 3/7: Resolving script lines", project_id)
         script_lines = self._resolve_script_lines(
+            project_id=project_id,
             article=article,
             resolved_config=resolved_config,
             script_prompt_override=script_prompt_override,
@@ -479,10 +579,18 @@ class PipelineService:
         project_id: str,
         manuscript: Manuscript,
         resolved_config: ResolvedConfig,
+        audio_mode: str,
     ) -> list[Path]:
         rendered_audio_clips: list[Path] = []
         current_timeline_seconds = 0.0
-        tts_available = self._tts_is_available()
+        if audio_mode == "elevenlabs":
+            if not self.settings.elevenlabs_api_key.strip():
+                raise ValueError("ElevenLabs is not configured for this environment")
+            if not self._tts_is_available():
+                raise ValueError("ElevenLabs is unavailable for manuscript processing")
+            tts_available = True
+        else:
+            tts_available = False
         segment_pause_seconds = (
             resolved_config.segment_pause_seconds
             if resolved_config.segment_pause_seconds is not None
@@ -490,87 +598,144 @@ class PipelineService:
         )
         total_line_count = sum(len(segment.texts) for segment in manuscript.segments)
         rendered_line_count = 0
-        pause_audio_clip_path: Path | None = None
+        silence_audio_clip_paths: dict[int, Path] = {}
         logger.info(
-            "[pipeline:%s] Audio rendering started (segments=%d, lines=%d, segment_pause=%.2fs, tts_available=%s)",
+            "[pipeline:%s] Audio rendering started (segments=%d, lines=%d, segment_pause=%.2fs, audio_mode=%s, tts_available=%s)",
             project_id,
             len(manuscript.segments),
             total_line_count,
             segment_pause_seconds,
+            audio_mode,
             tts_available,
         )
 
+        def append_silence(duration_seconds: float) -> None:
+            nonlocal current_timeline_seconds
+            if duration_seconds <= 0:
+                return
+
+            silence_duration_key = int(round(duration_seconds * 1000))
+            if tts_available:
+                silence_clip_path = silence_audio_clip_paths.get(silence_duration_key)
+                if silence_clip_path is None:
+                    silence_clip_path = (
+                        self.store.project_path(project_id)
+                        / "working"
+                        / "audio"
+                        / f"pause-{silence_duration_key}ms.mp3"
+                    )
+                    self.tts_service.create_silence_mp3(duration_seconds, silence_clip_path)
+                    silence_audio_clip_paths[silence_duration_key] = silence_clip_path
+                rendered_audio_clips.append(silence_clip_path)
+
+            current_timeline_seconds += duration_seconds
+
         for segment_index, segment in enumerate(manuscript.segments, start=1):
             segment_start_seconds = current_timeline_seconds
-            for text_line in segment.texts:
-                next_line_number = rendered_line_count + 1
+            custom_audio_length = (
+                float(segment.customAudio.length)
+                if segment.customAudio and segment.customAudio.length is not None
+                else None
+            )
+
+            if custom_audio_length is not None and custom_audio_length > 0:
+                for text_line in segment.texts:
+                    text_line.start = round(segment_start_seconds, 3)
+                    text_line.end = round(segment_start_seconds + custom_audio_length, 3)
+                current_timeline_seconds += custom_audio_length
+                rendered_line_count += len(segment.texts)
                 logger.info(
-                    "[pipeline:%s] Synthesizing line %d/%d (segment=%d, line_id=%d)",
+                    "[pipeline:%s] Segment %d/%d timed from custom audio (duration=%.3fs)",
                     project_id,
-                    next_line_number,
-                    total_line_count,
                     segment_index,
-                    text_line.line_id,
+                    len(manuscript.segments),
+                    custom_audio_length,
                 )
-                line_audio_clip_path = (
-                    self.store.project_path(project_id)
-                    / "working"
-                    / "audio"
-                    / f"line-{text_line.line_id:03}.mp3"
-                )
-                if tts_available:
-                    self.tts_service.synthesize_line(
-                        text=text_line.text,
-                        output_mp3=line_audio_clip_path,
-                        voice_id=resolved_config.voice_id,
-                        model_id=resolved_config.tts_model_id,
-                        voice_settings=resolved_config.voice_settings,
-                    )
-                    clip_duration_seconds = self.tts_service.get_duration_seconds(
-                        line_audio_clip_path
-                    )
-                    rendered_audio_clips.append(line_audio_clip_path)
+            else:
+                for line_index, text_line in enumerate(segment.texts, start=1):
+                    next_line_number = rendered_line_count + 1
                     logger.info(
-                        "[pipeline:%s] Line %d/%d synthesized",
+                        "[pipeline:%s] Synthesizing line %d/%d (segment=%d, line_id=%d)",
                         project_id,
                         next_line_number,
                         total_line_count,
+                        segment_index,
+                        text_line.line_id,
                     )
-                else:
-                    clip_duration_seconds = self._estimate_line_duration_seconds(text_line.text)
-                    logger.info(
-                        "[pipeline:%s] Line %d/%d timed without TTS (duration=%.3fs)",
-                        project_id,
-                        next_line_number,
-                        total_line_count,
-                        clip_duration_seconds,
+                    line_audio_clip_path = (
+                        self.store.project_path(project_id)
+                        / "working"
+                        / "audio"
+                        / f"line-{text_line.line_id:03}.mp3"
                     )
-
-                text_line.start = round(current_timeline_seconds, 3)
-                text_line.end = round(current_timeline_seconds + clip_duration_seconds, 3)
-                current_timeline_seconds += clip_duration_seconds
-                rendered_line_count += 1
-
-                if (
-                    segment_pause_seconds > 0
-                    and rendered_line_count < total_line_count
-                    and tts_available
-                ):
-                    if pause_audio_clip_path is None:
-                        pause_audio_clip_path = (
-                            self.store.project_path(project_id)
-                            / "working"
-                            / "audio"
-                            / f"pause-{int(segment_pause_seconds * 1000)}ms.mp3"
+                    if tts_available:
+                        self.tts_service.synthesize_line(
+                            text=text_line.text,
+                            output_mp3=line_audio_clip_path,
+                            voice_id=resolved_config.voice_id,
+                            model_id=resolved_config.tts_model_id,
+                            voice_settings=resolved_config.voice_settings,
                         )
-                        self.tts_service.create_silence_mp3(segment_pause_seconds, pause_audio_clip_path)
-                    rendered_audio_clips.append(pause_audio_clip_path)
-                    current_timeline_seconds += segment_pause_seconds
-                elif segment_pause_seconds > 0 and rendered_line_count < total_line_count:
-                    current_timeline_seconds += segment_pause_seconds
+                        clip_duration_seconds = self.tts_service.get_duration_seconds(
+                            line_audio_clip_path
+                        )
+                        rendered_audio_clips.append(line_audio_clip_path)
+                        if self.usage_tracker is not None:
+                            self.usage_tracker.record_elevenlabs_request(
+                                project_id,
+                                model_id=resolved_config.tts_model_id,
+                                voice_id=resolved_config.voice_id,
+                                text=text_line.text,
+                                operation="process-manuscript",
+                            )
+                        logger.info(
+                            "[pipeline:%s] Line %d/%d synthesized",
+                            project_id,
+                            next_line_number,
+                            total_line_count,
+                        )
+                    else:
+                        clip_duration_seconds = self._estimate_line_duration_seconds(text_line.text)
+                        logger.info(
+                            "[pipeline:%s] Line %d/%d timed without TTS (duration=%.3fs)",
+                            project_id,
+                            next_line_number,
+                            total_line_count,
+                            clip_duration_seconds,
+                        )
+
+                    text_line.start = round(current_timeline_seconds, 3)
+                    text_line.end = round(current_timeline_seconds + clip_duration_seconds, 3)
+                    current_timeline_seconds += clip_duration_seconds
+                    rendered_line_count += 1
+
+                    is_last_line_in_segment = line_index == len(segment.texts)
+                    if segment_pause_seconds > 0 and not is_last_line_in_segment:
+                        append_silence(segment_pause_seconds)
+
+            natural_segment_duration = current_timeline_seconds - segment_start_seconds
+            segment_duration_override = segment.durationOverrideSeconds
+            if segment_duration_override is not None:
+                normalized_override = round(float(segment_duration_override), 3)
+                if natural_segment_duration - normalized_override > 0.01:
+                    logger.warning(
+                        "[pipeline:%s] Segment %s override %.3fs is shorter than required duration %.3fs; ignoring override",
+                        project_id,
+                        segment.id,
+                        normalized_override,
+                        natural_segment_duration,
+                    )
+                    segment_duration_seconds = round(natural_segment_duration, 3)
+                elif normalized_override > natural_segment_duration:
+                    append_silence(normalized_override - natural_segment_duration)
+                    segment_duration_seconds = normalized_override
+                else:
+                    segment_duration_seconds = normalized_override
+            else:
+                segment_duration_seconds = round(current_timeline_seconds - segment_start_seconds, 3)
 
             segment.start = round(segment_start_seconds, 3)
-            segment.end = round(max((text_line.end or segment_start_seconds) for text_line in segment.texts), 3)
+            segment.end = round(segment_start_seconds + segment_duration_seconds, 3)
             segment.text = "\n\n".join([text_line.displayText or text_line.text for text_line in segment.texts])
             logger.info(
                 "[pipeline:%s] Segment %d/%d rendered (start=%.3fs, end=%.3fs)",
@@ -580,6 +745,9 @@ class PipelineService:
                 segment.start,
                 segment.end,
             )
+
+            if segment_pause_seconds > 0 and segment_index < len(manuscript.segments):
+                append_silence(segment_pause_seconds)
 
         logger.info(
             "[pipeline:%s] Audio rendering completed (clips=%d)",
@@ -604,12 +772,18 @@ class PipelineService:
         estimated = 0.6 + max(words, 1) * 0.42 + punctuation_bonus
         return round(max(1.2, estimated), 3)
 
-    def process_manuscript(self, project_id: str, manuscript: Manuscript | None = None) -> Manuscript:
+    def process_manuscript(
+        self,
+        project_id: str,
+        manuscript: Manuscript | None = None,
+        audio_mode: str = "elevenlabs",
+    ) -> Manuscript:
         logger.info("[pipeline:%s] Manuscript processing started", project_id)
         self.store.ensure_layout(project_id)
         logger.info("[pipeline:%s] Step 1/4: Resolving processing config", project_id)
         generation_manifest = self.store.load_generation_manifest(project_id)
         resolved_config = self.config_resolver.resolve(generation_manifest)
+        resolved_config = self._apply_project_config_override(project_id, resolved_config)
         logger.info("[pipeline:%s] Processing config resolved", project_id)
 
         logger.info("[pipeline:%s] Step 2/4: Loading manuscript", project_id)
@@ -625,6 +799,7 @@ class PipelineService:
             project_id=project_id,
             manuscript=manuscript_to_process,
             resolved_config=resolved_config,
+            audio_mode=audio_mode,
         )
         logger.info(
             "[pipeline:%s] Segment audio timeline ready (clips=%d)",
@@ -649,14 +824,17 @@ class PipelineService:
         else:
             manuscript_to_process.meta.audio = {}
             logger.info(
-                "[pipeline:%s] Narration skipped because TTS is unavailable",
+                "[pipeline:%s] Narration skipped because audio mode is '%s'",
                 project_id,
+                audio_mode,
             )
 
         output_payload = manuscript_to_process.model_dump(mode="json", exclude_none=True)
         output_payload["meta"]["processedAt"] = datetime.now(timezone.utc).isoformat()
 
         self.store.save_json(project_id, "output/processed_manuscript.json", output_payload)
+        if self.usage_tracker is not None:
+            self.usage_tracker.record_preview_run(project_id, audio_mode=audio_mode)
         logger.info("[pipeline:%s] Manuscript processing finished", project_id)
         return manuscript_to_process
 

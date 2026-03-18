@@ -73,6 +73,7 @@ const assetListResponseSchema = z.object({
 
 const SVP_BASE_URL = "https://svp.vg.no/svp/api/v1";
 const SVP_APP_NAME = "docs";
+const EXTERNAL_FETCH_TIMEOUT_MS = 10_000;
 
 type SvpAsset = z.infer<typeof assetSchema>;
 
@@ -160,6 +161,7 @@ async function fetchJson(url: string): Promise<unknown> {
       Accept: "application/json",
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(EXTERNAL_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -214,7 +216,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
 
-    return NextResponse.json({ error: toErrorMessage(error) }, { status: 500 });
+    const message =
+      error instanceof Error && error.name === "AbortError"
+        ? `Timed out while fetching SVP assets after ${EXTERNAL_FETCH_TIMEOUT_MS}ms`
+        : toErrorMessage(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

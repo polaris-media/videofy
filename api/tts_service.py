@@ -21,6 +21,22 @@ except ImportError:  # pragma: no cover - backward compatibility
 
 logger = logging.getLogger(__name__)
 
+ELEVENLABS_RESIDENCY_BASE_URLS = {
+    "eu": "https://api.eu.residency.elevenlabs.io",
+    "in": "https://api.in.residency.elevenlabs.io",
+}
+
+
+def resolve_elevenlabs_base_url(api_key: str, base_url: str | None = None) -> str | None:
+    if base_url and base_url.strip():
+        return base_url.strip()
+
+    match = re.search(r"_residency_(?P<region>[a-z]+)$", api_key.strip())
+    if not match:
+        return None
+
+    return ELEVENLABS_RESIDENCY_BASE_URLS.get(match.group("region"))
+
 
 @runtime_checkable
 class TTSService(Protocol):
@@ -111,11 +127,25 @@ class AudioToolsMixin:
 
 
 class ElevenLabsService(AudioToolsMixin):
-    def __init__(self, api_key: str, voice_id: str, ffprobe_bin: str, ffmpeg_bin: str):
+    def __init__(
+        self,
+        api_key: str,
+        voice_id: str,
+        ffprobe_bin: str,
+        ffmpeg_bin: str,
+        base_url: str | None = None,
+    ):
         super().__init__(ffprobe_bin=ffprobe_bin, ffmpeg_bin=ffmpeg_bin)
         self._api_key = api_key
         self._voice_id = voice_id
-        self._client = ElevenLabs(api_key=self._api_key) if self._api_key and ElevenLabs else None
+        self._base_url = resolve_elevenlabs_base_url(api_key=api_key, base_url=base_url)
+        if self._base_url:
+            logger.info("Using ElevenLabs base URL %s", self._base_url)
+        self._client = (
+            ElevenLabs(api_key=self._api_key, base_url=self._base_url)
+            if self._api_key and ElevenLabs
+            else None
+        )
 
     def can_synthesize(self) -> bool:
         return self._client is not None

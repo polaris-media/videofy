@@ -10,33 +10,65 @@ export default function Main({ children }: { children: ReactNode }) {
         wave={{ disabled: true }}
         theme={{
           hashed: false,
-          algorithm: theme.darkAlgorithm,
+          algorithm: theme.defaultAlgorithm,
           token: {
-            colorPrimary: "#4f39f6",
+            colorPrimary: "#1d4ed8",
             fontSize: 16,
             fontFamily: "Roboto Flex, sans, Helvetica, Arial",
-            colorBgBase: "#131315",
-            colorBgContainer: "#1a1a1d",
-            colorBgElevated: "rgb(34,34,40)",
+            colorBgBase: "#f3f7fd",
+            colorBgLayout: "#f3f7fd",
+            colorBgContainer: "#ffffff",
+            colorBgElevated: "#ffffff",
+            colorBorder: "#d7e3f4",
+            colorBorderSecondary: "#e5edf8",
+            colorText: "#0f172a",
+            colorTextSecondary: "#475569",
+            borderRadius: 14,
           },
           components: {
+            Layout: {
+              bodyBg: "#f3f7fd",
+              headerBg: "#ffffff",
+              siderBg: "#ffffff",
+              triggerBg: "#e8f0fb",
+            },
+            Card: {
+              colorBgContainer: "#ffffff",
+              colorBorderSecondary: "#dbe5f3",
+            },
+            Input: {
+              colorBgContainer: "#ffffff",
+              activeBorderColor: "#2563eb",
+              hoverBorderColor: "#60a5fa",
+            },
+            Select: {
+              colorBgContainer: "#ffffff",
+              optionSelectedBg: "#dbeafe",
+              optionActiveBg: "#eff6ff",
+            },
+            Button: {
+              primaryShadow: "0 10px 24px rgba(37, 99, 235, 0.18)",
+              defaultShadow: "none",
+            },
             TreeSelect: {
               indentSize: 12,
-              controlItemBgHover: "rgba(0,0,0,0.09)",
+              controlItemBgHover: "#eff6ff",
             },
             Tabs: {
-              colorPrimary: "oklch(0.673 0.182 276.935)",
-              itemActiveColor: "white",
+              colorPrimary: "#1d4ed8",
+              itemActiveColor: "#1d4ed8",
+              itemColor: "#475569",
+              itemHoverColor: "#1e40af",
             },
           },
         }}
       >
         <html
           lang="en"
-          style={{ height: "100%" }}
+          style={{ height: "100%", background: "#f3f7fd" }}
         >
-          <body style={{ height: "100%", margin: 0 }}>
-            <Layout style={{ minHeight: "100vh" }}>
+          <body style={{ height: "100%", margin: 0, background: "#f3f7fd" }}>
+            <Layout style={{ minHeight: "100vh", background: "#f3f7fd" }}>
               <App message={{ duration: 10 }}>{children}</App>
             </Layout>
           </body>

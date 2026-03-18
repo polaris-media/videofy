@@ -21,6 +21,10 @@ interface Props {
   voice?: boolean;
   style?: CSSProperties;
   playerConfig?: PlayerConfig;
+  storyIndicator?: {
+    length: number;
+    current: number;
+  };
 }
 
 export const Player = forwardRef<PlayerRef, Props>(
@@ -31,6 +35,7 @@ export const Player = forwardRef<PlayerRef, Props>(
       width = VIDEO_WIDTH,
       voice = true,
       playerConfig = defaultPlayerConfig,
+      storyIndicator,
       ...rest
     },
     ref
@@ -50,6 +55,7 @@ export const Player = forwardRef<PlayerRef, Props>(
           manuscripts,
           voice,
           playerConfig,
+          storyIndicator,
         }}
         durationInFrames={totalDuration}
         fps={VIDEO_FPS}

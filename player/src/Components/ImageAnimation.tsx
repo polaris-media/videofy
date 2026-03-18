@@ -1,4 +1,5 @@
 import { CSSProperties, FC } from "react";
+import { AbsoluteFill } from "remotion";
 import {
   makeTransform,
   rotate as remotionRotate,
@@ -28,6 +29,32 @@ export const ImageAnimation: FC<Props> = ({
   cameraMovement,
   durationInFrames,
 }) => {
+  if (asset.displayMode === "contain-blur") {
+    return (
+      <AbsoluteFill style={{ backgroundColor: "#0b1220", overflow: "hidden" }}>
+        <Img
+          style={{
+            ...imageStyles,
+            filter: "blur(48px)",
+            transform: "scale(1.12)",
+            opacity: 0.85,
+          }}
+          src={asset.url}
+        />
+        <Img
+          style={{
+            ...imageStyles,
+            objectFit: "contain",
+            padding: "3%",
+            position: "absolute",
+            inset: 0,
+          }}
+          src={asset.url}
+        />
+      </AbsoluteFill>
+    );
+  }
+
   const frame = useCurrentFrame();
 
   const hotspot = getHotspot(asset);

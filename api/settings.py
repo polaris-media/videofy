@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o"
 
     elevenlabs_api_key: str = ""
+    elevenlabs_base_url: str = ""
     local_tts_enabled: bool = False
     local_tts_voice: str = "Nora"
     local_tts_rate: int = 145

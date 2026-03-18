@@ -1,6 +1,6 @@
 import { ImageType, MediaAssetType } from "@videofy/types";
 import { useReactive } from "ahooks";
-import { Button, Form, Input, Modal, Upload } from "antd";
+import { Button, Form, Input, Modal, Select, Upload } from "antd";
 import { useForm } from "antd/es/form/Form";
 import { useMemo } from "react";
 import ReactCrop, {
@@ -61,6 +61,7 @@ const EditImage = ({
           image.imageAsset.size.height
         ),
       byline: image?.byline,
+      displayMode: image?.displayMode || "cover",
       loading: false,
     }),
     [image]
@@ -95,6 +96,7 @@ const EditImage = ({
       const newImage: ImageType = {
         type: "image",
         url: result.url,
+        displayMode: form.getFieldValue("displayMode") || "cover",
         imageAsset: {
           id: "1",
           size: {
@@ -116,12 +118,14 @@ const EditImage = ({
   type FormType = {
     crop?: PercentCrop;
     byline?: string;
+    displayMode?: "cover" | "contain-blur";
   };
 
-  const handleClose = ({ crop, byline }: FormType) => {
+  const handleClose = ({ crop, byline, displayMode }: FormType) => {
     if (image) {
       const updatedImage = {
         ...image,
+        displayMode,
         hotspot: convertToPixelCrop(
           crop || {},
           image.imageAsset.size.width,
@@ -158,6 +162,14 @@ const EditImage = ({
             </Form.Item>
             <Form.Item name="byline" label="Byline">
               <Input />
+            </Form.Item>
+            <Form.Item name="displayMode" label="Display mode">
+              <Select
+                options={[
+                  { value: "cover", label: "Cover crop" },
+                  { value: "contain-blur", label: "Full image with blurred frame" },
+                ]}
+              />
             </Form.Item>
           </>
         )}

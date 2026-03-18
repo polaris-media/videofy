@@ -55,6 +55,7 @@ export const imageSchema = z.object({
   type: z.literal("image"),
   byline: z.string().optional(),
   description: z.string().optional(),
+  displayMode: z.enum(["cover", "contain-blur"]).optional(),
   imageAsset: imageAssetSchema,
   url: z.string().url(),
   hotspot: hotspotSchema.optional(),
@@ -102,6 +103,7 @@ export const segmentSchema = z.object({
   text: z.string().optional(),
   texts: z.array(textSchema),
   cameraMovement: cameraMovementsEnum,
+  durationOverrideSeconds: z.number().positive().optional(),
   images: z.array(mediaAssetSchema).optional(),
   mainMedia: mediaAssetSchema.optional(),
   customAudio: z

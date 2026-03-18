@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
 import { dataApiFetch } from "@/lib/backend";
+import { getProjectStorage } from "@/lib/projectStorage";
 
 interface AssetParams {
   projectId: string;
@@ -27,15 +26,7 @@ export const GET = async (
   }
 
   try {
-    const imagesDir = join(
-      process.cwd(),
-      "..",
-      "projects",
-      projectId,
-      "input",
-      "images"
-    );
-    const files = await readdir(imagesDir).catch(() => []);
+    const files = await getProjectStorage().listProjectFiles(projectId, "input/images");
     return NextResponse.json({ files });
   } catch (error) {
     console.error("Error listing local assets:", error);

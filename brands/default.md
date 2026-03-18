@@ -11,6 +11,7 @@ The brand file must stay valid JSON. Regular JSON comments are not supported by 
 - `exportDefaults`: Default toggle values shown in the download/export UI.
 - `people`: Voice and TTS defaults for generated narration.
 - `prompts`: Brand-specific prompt instructions used during manuscript and placement generation.
+  - `scriptPromptOptions`: Optional array of named manuscript prompt presets exposed as buttons in the CMS start page.
 - `player`: Visual identity, logo, transitions, colors, and optional background music.
 
 ## Player Fields

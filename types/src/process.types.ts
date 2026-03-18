@@ -32,6 +32,7 @@ const imageSchema = z.object({
   type: z.literal("image"),
   byline: z.string().optional(),
   description: z.string().optional(),
+  displayMode: z.enum(["cover", "contain-blur"]).optional(),
   imageAsset: imageAssetSchema,
   url: z.string().url(),
   hotspot: hotspotSchema.optional(),
@@ -66,6 +67,7 @@ export const processedManuscriptSchema = z.object({
       mood: moodEnum,
       type: z.string(),
       style: z.enum(["top", "middle", "bottom"]),
+      durationOverrideSeconds: z.number().positive().optional(),
       customAudio: z
         .object({
           src: z.string().optional(),

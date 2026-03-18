@@ -13,15 +13,33 @@ const brandConfigSchema = z.object({
   prompts: z
     .object({
       scriptPrompt: z.string().optional(),
+      scriptPromptOptions: z
+        .array(
+          z.object({
+            id: z.string().min(1),
+            label: z.string().min(1),
+            prompt: z.string().min(1),
+            description: z.string().optional(),
+          })
+        )
+        .optional(),
     })
     .optional(),
 });
+
+export type BrandPromptOption = {
+  id: string;
+  label: string;
+  prompt: string;
+  description?: string;
+};
 
 export type BrandOption = {
   id: string;
   brandName: string;
   scriptPrompt: string;
   manuscriptModel?: string;
+  promptOptions: BrandPromptOption[];
 };
 
 function isSafeBrandId(brandId: string): boolean {
@@ -53,6 +71,7 @@ export async function listBrands(): Promise<BrandOption[]> {
         brandName: parsed.data.brand_name || id,
         scriptPrompt: parsed.data.prompts?.scriptPrompt || "",
         manuscriptModel: parsed.data.openai?.manuscriptModel || undefined,
+        promptOptions: parsed.data.prompts?.scriptPromptOptions || [],
       });
     } catch {
       continue;

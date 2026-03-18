@@ -56,7 +56,73 @@ export type BrandOption = {
   brandName: string;
   scriptPrompt: string;
   manuscriptModel?: string;
+  promptOptions: Array<{
+    id: string;
+    label: string;
+    prompt: string;
+    description?: string;
+  }>;
 };
+
+export type GenerationSummary = {
+  id: string;
+  projectId: string;
+  title: string;
+  articleCount: number;
+  brandId?: string;
+  newsroom?: string;
+  createdDate: string;
+  updatedAt: string;
+};
+
+export type AIUsageTotals = {
+  openai: {
+    calls: number;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    reasoningTokens: number;
+  };
+  elevenlabs: {
+    calls: number;
+    characters: number;
+  };
+  preview: {
+    withoutAudio: number;
+    withElevenLabs: number;
+  };
+};
+
+export type AIUsageProjectSummary = {
+  projectId?: string;
+  updatedAt?: string;
+  totals: AIUsageTotals;
+  brandId?: string;
+  newsroom?: string;
+  title?: string;
+  articleCount?: number;
+};
+
+export type AIUsageResponse =
+  | AIUsageProjectSummary
+  | {
+      totals: AIUsageTotals;
+      groups: {
+        newsrooms: Array<{
+          key: string;
+          label: string;
+          projectCount: number;
+          totals: AIUsageTotals;
+        }>;
+        brands: Array<{
+          key: string;
+          label: string;
+          projectCount: number;
+          totals: AIUsageTotals;
+        }>;
+      };
+      projects: AIUsageProjectSummary[];
+    };
 
 export type PolarisArticleItem = {
   id: string;
@@ -133,6 +199,28 @@ export const getBrands = async (): Promise<BrandOption[]> => {
   return response.data.brands;
 };
 
+export const getGenerations = async (): Promise<GenerationSummary[]> => {
+  const response = await axios.get<{ generations: GenerationSummary[] }>("/api/generations");
+  return response.data.generations;
+};
+
+export const getAIUsage = async (
+  projectId?: string,
+  newsroom?: string
+): Promise<AIUsageResponse> => {
+  const params = new URLSearchParams();
+  if (projectId) {
+    params.set("projectId", projectId);
+  }
+  if (newsroom) {
+    params.set("newsroom", newsroom);
+  }
+  const response = await axios.get<AIUsageResponse>(
+    params.size > 0 ? `/api/ai-usage?${params.toString()}` : "/api/ai-usage"
+  );
+  return response.data;
+};
+
 export const setProjectBrand = async (
   projectId: string,
   brandId: string
@@ -199,6 +287,16 @@ export const getProjectConfig = async (projectId: string): Promise<ApiConfig> =>
     `/api/configs?projectId=${encodeURIComponent(projectId)}`
   );
   return response.data;
+};
+
+export const saveProjectConfig = async (
+  projectId: string,
+  config: Config
+): Promise<void> => {
+  await axios.put("/api/configs", {
+    projectId,
+    config,
+  });
 };
 
 export const getNewsroomBranding = async (
@@ -287,3 +385,9 @@ export const useFetchers = () =>
 
 export const useBrands = () =>
   useResource<BrandOption[]>(getBrands, []);
+
+export const useGenerations = () =>
+  useResource<GenerationSummary[]>(getGenerations, []);
+
+export const useAIUsage = (projectId?: string, newsroom?: string) =>
+  useResource<AIUsageResponse>(() => getAIUsage(projectId, newsroom), [projectId, newsroom]);

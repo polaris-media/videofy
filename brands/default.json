@@ -16,7 +16,7 @@
   },
   "people": {
     "default": {
-      "voice": "h9K1sOblwDPp0OVDDPUJ",
+      "voice": "JBFqnCBsd6RMkjVDRZzb",
       "model_id": "eleven_turbo_v2_5",
       "stability": 0.5,
       "similarity_boost": 0.8,
@@ -31,7 +31,7 @@
   },
   "player": {
     "logo": "/api/brand-assets/brand_assets/vs-logo.svg",
-    "logoStyle": "position: absolute; top: 90px; right: 65px;",
+    "logoStyle": "position: absolute; top: 88px; right: 52px; width: 78px; opacity: 0.6;",
     "defaultCameraMovements": [
       "zoom-in",
       "pan-right",
@@ -40,6 +40,37 @@
       "zoom-in",
       "zoom-out"
     ],
+    "progress": {
+      "placement": "left",
+      "offsetX": 42,
+      "offsetYPortrait": 1010,
+      "size": 56,
+      "gap": 10,
+      "shape": "circle"
+    },
+    "styles": {
+      "portrait": {
+        "captions": {
+          "container": "left: 88px; right: 88px;",
+          "text": "font-family: 'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif; font-weight: 700; font-size: 56px; line-height: 1.15; border-radius: 10px; padding: 8px 18px; background: #1c1e57; color: #ffffff;",
+          "placements": {
+            "top": "top: 14%;",
+            "middle": "top: 50%; transform: translateY(-50%);",
+            "bottom": "bottom: 13%;"
+          }
+        },
+        "progress": {
+          "active": "font-family: 'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif; font-weight: 700;",
+          "inactive": "font-family: 'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif; font-weight: 700;"
+        },
+        "photoCredits": {
+          "variant": "badge",
+          "showIcon": false,
+          "container": "left: 42px; top: 88px; background: rgba(28, 30, 87, 0.92);",
+          "text": "font-family: 'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif; font-size: 22px; font-weight: 600;"
+        }
+      }
+    },
     "colors": {
       "text": {
         "background": "#2C4FE3",
@@ -59,8 +90,8 @@
         "marker": "#2C4FE3"
       },
       "fotoCredits": {
-        "text": "#CACACA",
-        "icon": "#CACACA"
+        "text": "#ffffff",
+        "icon": "#ffffff"
       }
     },
     "backgroundMusicVolume": 1,

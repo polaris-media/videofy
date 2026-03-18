@@ -4,7 +4,7 @@ import { useEffect, useMemo, type FC } from "react";
 import { useReactive } from "ahooks";
 import { App, Button, Form, Input, Modal, Select, Spin, Typography } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
-import { runFetcherPlugin, setProjectBrand, useFetchers } from "@/api";
+import { runFetcherPlugin, saveProjectConfig, setProjectBrand, useFetchers } from "@/api";
 import { generateManuscript } from "@/utils/generateManuscript";
 import { Tab, useGlobalState } from "@/state/globalState";
 import PolarisArticleAssist from "@/components/FetcherFields/PolarisArticleAssist";
@@ -17,14 +17,14 @@ import {
 type FormType = {
   fetcherId: string;
   model: GenerationModel;
-  inputs: Record<string, string>;
+  inputs: Record<string, string | string[]>;
 };
 
 type AddFetchedArticleProps = {
   open: boolean;
   setOpen: (open: boolean) => void;
   brandId: string;
-  onChange: (tab: Tab) => Promise<void>;
+  onChange: (tabs: Tab[]) => Promise<void>;
 };
 
 const DEFAULT_FETCHER_ID = "polaris-capi";
@@ -58,6 +58,10 @@ const AddFetchedArticle: FC<AddFetchedArticleProps> = ({
         }
 
         if (selectedFetcher?.id === "polaris-capi" && field.name === "newsroom") {
+          return false;
+        }
+
+        if (selectedFetcher?.id === "polaris-capi" && field.name === "article_ref") {
           return false;
         }
 
@@ -106,35 +110,118 @@ const AddFetchedArticle: FC<AddFetchedArticleProps> = ({
     state.loading = true;
     state.loadingMessage = "Fetching article...";
     try {
-      const fetchResult = await runFetcherPlugin({
-        fetcherId: values.fetcherId,
-        inputs: values.inputs || {},
-      });
+      const rawInputs = values.inputs || {};
+      const articleRefs =
+        values.fetcherId === "polaris-capi"
+          ? Array.isArray(rawInputs.article_refs)
+            ? rawInputs.article_refs
+                .filter((value): value is string => typeof value === "string")
+                .map((value) => value.trim())
+                .filter(Boolean)
+            : []
+          : [];
+      const manualArticleRef =
+        typeof rawInputs.article_ref === "string" ? rawInputs.article_ref.trim() : "";
 
-      state.loadingMessage = "Applying brand settings...";
-      await setProjectBrand(fetchResult.projectId, brandId || "default");
+      if (values.fetcherId === "polaris-capi" && articleRefs.length === 0 && !manualArticleRef) {
+        throw new Error("Select one or more articles, or paste a Polaris article URL.");
+      }
 
-      state.loadingMessage = "Generating manuscript...";
-      const manuscript = await generateManuscript(fetchResult.projectId, config.config, {
-        model: values.model,
-      });
-      const cleanedManuscript = {
-        ...manuscript,
-        meta: {
-          ...manuscript.meta,
-          articleUrl: fetchResult.projectId,
-          uniqueId: crypto.randomUUID(),
+      const fetchTargets =
+        articleRefs.length > 0
+          ? articleRefs
+          : values.fetcherId === "polaris-capi" && manualArticleRef
+            ? [manualArticleRef]
+            : [undefined];
+
+      const baseInputs = Object.entries(rawInputs).reduce<Record<string, string>>(
+        (accumulator, [key, value]) => {
+          if (
+            key === "article_refs" ||
+            key === "article_ref" ||
+            typeof value !== "string" ||
+            value.trim().length === 0
+          ) {
+            return accumulator;
+          }
+
+          accumulator[key] = value.trim();
+          return accumulator;
         },
-      };
+        {}
+      );
 
-      await onChange({
-        articleUrl: fetchResult.projectId,
-        projectId: fetchResult.projectId,
-        manuscript: cleanedManuscript,
-      });
+      const addedTabs: Tab[] = [];
+      const failedTargets: string[] = [];
+
+      for (const [targetIndex, articleRef] of fetchTargets.entries()) {
+        const fetchLabel =
+          articleRef || selectedFetcher?.title || `article ${targetIndex + 1}`;
+        state.loadingMessage = `Fetching ${targetIndex + 1}/${fetchTargets.length}...`;
+
+        try {
+          const fetchResult = await runFetcherPlugin({
+            fetcherId: values.fetcherId,
+            inputs: articleRef
+              ? {
+                  ...baseInputs,
+                  article_ref: articleRef,
+                }
+              : baseInputs,
+          });
+
+          state.loadingMessage = `Applying brand ${targetIndex + 1}/${fetchTargets.length}...`;
+          await setProjectBrand(fetchResult.projectId, brandId || "default");
+
+          const customizedConfig = {
+            ...config.config,
+            openai: {
+              ...(config.config.openai || {}),
+              manuscriptModel: values.model,
+              mediaModel: values.model,
+            },
+          };
+
+          await saveProjectConfig(fetchResult.projectId, customizedConfig);
+
+          state.loadingMessage = `Generating ${targetIndex + 1}/${fetchTargets.length}...`;
+          const manuscript = await generateManuscript(fetchResult.projectId, customizedConfig);
+          const cleanedManuscript = {
+            ...manuscript,
+            meta: {
+              ...manuscript.meta,
+              articleUrl: fetchResult.projectId,
+              uniqueId: crypto.randomUUID(),
+            },
+          };
+
+          addedTabs.push({
+            articleUrl: fetchResult.projectId,
+            projectId: fetchResult.projectId,
+            manuscript: cleanedManuscript,
+          });
+        } catch (error) {
+          console.error(`[add-article] Failed to fetch target '${fetchLabel}':`, error);
+          failedTargets.push(fetchLabel);
+        }
+      }
+
+      if (addedTabs.length === 0) {
+        throw new Error("Failed to add the selected article(s).");
+      }
+
+      await onChange(addedTabs);
 
       setOpen(false);
       form.resetFields();
+
+      if (failedTargets.length > 0) {
+        notification.warning({
+          title: `Added ${addedTabs.length} article(s), ${failedTargets.length} failed`,
+          description: failedTargets.join(", "),
+          duration: 0,
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to add article";
       notification.error({ title: message, duration: 0 });

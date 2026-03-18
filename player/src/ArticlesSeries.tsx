@@ -46,6 +46,10 @@ export interface ArticleSeriesProps {
   backgroundMusic?: boolean;
   disabledLogo?: boolean;
   playerConfig?: PlayerConfig;
+  storyIndicator?: {
+    length: number;
+    current: number;
+  };
 }
 
 function resolveOptionalAsset(baseUrl: string, assetPath: string | undefined): string | undefined {
@@ -162,7 +166,8 @@ function collectPrefetchUrls(manuscripts: Manuscript[]): string[] {
 function buildSeriesSequences(
   manuscripts: Manuscript[],
   expandedPlayerConfig: PlayerConfig,
-  voice: boolean
+  voice: boolean,
+  storyIndicator?: ArticleSeriesProps["storyIndicator"]
 ): ReactElement[] {
   const sequenceItems: ReactElement[] = [];
   const reporterIntro = getSelectedReporterIntro(expandedPlayerConfig);
@@ -197,6 +202,10 @@ function buildSeriesSequences(
   for (const [manuscriptIndex, manuscript] of manuscripts.entries()) {
     const manuscriptKey = manuscript.meta.uniqueId || `${manuscript.meta.id}-${manuscriptIndex}`;
     const articleKey = `article-${manuscriptKey}-${manuscriptIndex}`;
+    const indicator =
+      storyIndicator && manuscripts.length === 1
+        ? storyIndicator
+        : { length: manuscripts.length, current: manuscriptIndex };
 
     sequenceItems.push(
       <Series.Sequence
@@ -211,7 +220,7 @@ function buildSeriesSequences(
         durationInFrames={getSegmentDuration(manuscript)}
       >
         <ExternalDisplayArticle
-          indicator={{ length: manuscripts.length, current: manuscriptIndex }}
+          indicator={indicator}
           voice={voice}
           manuscript={manuscript}
           config={expandedPlayerConfig}
@@ -274,6 +283,7 @@ export const ArticlesSeries: FC<ArticleSeriesProps> = ({
   backgroundMusic = true,
   disabledLogo = false,
   playerConfig = defaultPlayerConfig,
+  storyIndicator,
 }) => {
   const expandedPlayerConfig = useMemo(
     () => buildExpandedPlayerConfig(playerConfig),
@@ -328,7 +338,12 @@ export const ArticlesSeries: FC<ArticleSeriesProps> = ({
     return null;
   }
 
-  const sequences = buildSeriesSequences(manuscripts, expandedPlayerConfig, voice);
+  const sequences = buildSeriesSequences(
+    manuscripts,
+    expandedPlayerConfig,
+    voice,
+    storyIndicator
+  );
   const outroCardDuration = roundToNearestFrame(expandedPlayerConfig.outroCard?.duration ?? 0);
   const logoDuration = getFullDuration({
     manuscripts,

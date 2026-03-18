@@ -21,8 +21,16 @@ export const getSegmentDuration = (manuscript: Manuscript) => {
   const segmentDuration = manuscript.segments.reduce((totalLength, segment) => {
     const asset = segment.images?.[0];
     const hasText = segment.texts?.some((text) => text.text);
+    const overrideDuration =
+      typeof segment.durationOverrideSeconds === "number"
+        ? segment.durationOverrideSeconds
+        : undefined;
 
     let segmentLength = segment.end - segment.start;
+
+    if (overrideDuration) {
+      segmentLength = overrideDuration;
+    }
 
     if (asset?.type === "video" && !hasText && !segment.customAudio?.length) {
       segmentLength =
@@ -31,7 +39,7 @@ export const getSegmentDuration = (manuscript: Manuscript) => {
     }
 
     if (segment.customAudio?.length) {
-      segmentLength = segment.customAudio?.length;
+      segmentLength = Math.max(segment.customAudio.length, segmentLength);
     }
 
     return totalLength + segmentLength;

@@ -28,6 +28,11 @@
               "container": "background: rgba(10, 11, 11, 0.56); padding: 10px 8px; border-radius: 999px;",
               "text": "font-size: 24px; font-weight: 500;"
             }
+          },
+          "portrait": {
+            "captions": {
+              "container": "left: 88px; right: 88px; background: transparent; padding: 0;"
+            }
           }
         },
         "colors": {

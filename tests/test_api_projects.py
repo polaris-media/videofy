@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import json
+
 from fastapi.testclient import TestClient
 
 from api.factory import create_app
@@ -102,3 +104,124 @@ def test_api_upload_image_and_reject_invalid_project_id(tmp_path: Path):
             files={"file": ("test.jpg", b"abc", "image/jpeg")},
         )
         assert upload_invalid.status_code == 400
+
+
+def test_api_generate_uses_project_config_override(tmp_path: Path):
+    projects_root = tmp_path / "projects"
+    config_root = tmp_path / "brands"
+    write_brand_config(config_root)
+
+    project_id = "demo"
+    (projects_root / project_id / "input" / "images").mkdir(parents=True, exist_ok=True)
+    (projects_root / project_id / "input" / "images" / "img.jpg").write_bytes(b"x")
+    (projects_root / project_id / "input" / "article.json").write_text(
+        json.dumps(
+            {
+                "title": "Demo",
+                "byline": "Test",
+                "pubdate": "2026-01-01T00:00:00Z",
+                "text": "Body",
+                "script_lines": ["A"],
+                "images": [{"path": "images/img.jpg"}],
+                "videos": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (projects_root / project_id / "working").mkdir(parents=True, exist_ok=True)
+    (projects_root / project_id / "working" / "config.override.json").write_text(
+        json.dumps(
+            {
+                "openai": {
+                    "manuscriptModel": "gpt-5.1",
+                    "mediaModel": "gpt-5.1",
+                },
+                "manuscript": {
+                    "script_prompt": "override-script-prompt",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    settings = Settings(
+        projects_root=projects_root,
+        config_root=config_root,
+        app_base_url="http://testserver",
+        openai_api_key="",
+        elevenlabs_api_key="",
+    )
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        generated = client.post(f"/api/projects/{project_id}/generate", json={})
+        assert generated.status_code == 200
+
+    resolved_config = json.loads(
+        (projects_root / project_id / "working" / "resolved_config.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert resolved_config["manuscriptModel"] == "gpt-5.1"
+    assert resolved_config["mediaModel"] == "gpt-5.1"
+
+
+def test_api_generate_falls_back_to_cms_generation_config_for_legacy_sessions(tmp_path: Path):
+    projects_root = tmp_path / "projects"
+    config_root = tmp_path / "brands"
+    write_brand_config(config_root)
+
+    project_id = "demo"
+    (projects_root / project_id / "input" / "images").mkdir(parents=True, exist_ok=True)
+    (projects_root / project_id / "input" / "images" / "img.jpg").write_bytes(b"x")
+    (projects_root / project_id / "input" / "article.json").write_text(
+        json.dumps(
+            {
+                "title": "Demo",
+                "byline": "Test",
+                "pubdate": "2026-01-01T00:00:00Z",
+                "text": "Body",
+                "script_lines": ["A"],
+                "images": [{"path": "images/img.jpg"}],
+                "videos": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (projects_root / project_id / "working").mkdir(parents=True, exist_ok=True)
+    (projects_root / project_id / "working" / "cms-generation.json").write_text(
+        json.dumps(
+            {
+                "id": project_id,
+                "projectId": project_id,
+                "config": {
+                    "openai": {
+                        "manuscriptModel": "gpt-5.1",
+                        "mediaModel": "gpt-5.1",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    settings = Settings(
+        projects_root=projects_root,
+        config_root=config_root,
+        app_base_url="http://testserver",
+        openai_api_key="",
+        elevenlabs_api_key="",
+    )
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        generated = client.post(f"/api/projects/{project_id}/generate", json={})
+        assert generated.status_code == 200
+
+    resolved_config = json.loads(
+        (projects_root / project_id / "working" / "resolved_config.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert resolved_config["manuscriptModel"] == "gpt-5.1"
+    assert resolved_config["mediaModel"] == "gpt-5.1"

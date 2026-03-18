@@ -10,10 +10,12 @@ import ErrorCard from "./ErrorCard";
 import LoadingCard from "./LoadingCard";
 import { Tab, useGlobalState } from "@/state/globalState";
 import { DesktopOutlined, MobileOutlined } from "@ant-design/icons";
-import { Button, Segmented, Tooltip } from "antd";
+import { Button, Segmented, Tooltip, Typography } from "antd";
 import DownloadModal from "./DownloadModal";
+import AIUsageDashboard from "@/components/AIUsageDashboard";
 
 type Result = z.infer<typeof processedManuscriptSchema>;
+type AudioMode = "none" | "elevenlabs";
 
 const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
   const state = useReactive({
@@ -22,6 +24,7 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
     error: null as string | null,
     previewType: "Vertical" as "Vertical" | "Horizontal",
     downloadOpen: false,
+    activeAudioMode: "none" as AudioMode,
   });
   const abortController = useRef(new AbortController());
   const initialized = useRef(false);
@@ -51,11 +54,12 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
   );
 
   const fetchData = useCallback(
-    async (updating = false) => {
+    async (updating = false, audioMode: AudioMode = "none") => {
       if (!(tabs && config)) return;
 
       try {
         initialized.current = true;
+        state.activeAudioMode = audioMode;
 
         if (updating) {
           state.updating = true;
@@ -71,6 +75,7 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
               uniqueId: tab.manuscript.meta.uniqueId!,
               projectId: tab.projectId || generationId || tab.articleUrl,
               backendGenerationId: tab.backendGenerationId,
+              audioMode,
             });
           })
         );
@@ -94,11 +99,11 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
     [config, handleError, setProcessedManuscripts, state, tabs]
   );
 
-  const updatePreview = async () => {
+  const updatePreview = async (audioMode: AudioMode) => {
     if (playerRef.current) {
       playerRef.current.pause();
     }
-    await fetchData(true);
+    await fetchData(true, audioMode);
     await fetch("/api/generations", {
       method: "PUT",
       body: JSON.stringify({
@@ -114,7 +119,7 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
       playerRef.current.pause();
     }
 
-    fetchData();
+    fetchData(false, "none");
   }, []);
 
   const playerConfig = useMemo(
@@ -133,6 +138,10 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
       processedManuscripts.every((manuscript) => Boolean(manuscript.meta.audio?.src)),
     [processedManuscripts]
   );
+  const processingLabel =
+    state.activeAudioMode === "elevenlabs"
+      ? "Preview is generating with ElevenLabs..."
+      : "Preview is generating without ElevenLabs...";
 
   return (
     <div className="top-0 sticky flex flex-col w-full">
@@ -160,14 +169,14 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
             {(state.loading || state.updating) && (
               <div className="z-10 absolute inset-0 flex justify-center items-center bg-gray-500 bg-opacity-75">
                 <span className="font-semibold text-white text-lg">
-                  Preview is generating...
+                  {processingLabel}
                 </span>
               </div>
             )}
           </div>
         </>
       )}
-      <div className="flex justify-center items-end gap-2 mt-4 w-full">
+      <div className="flex flex-wrap justify-center items-end gap-2 mt-4 w-full">
         <Tooltip title="Layout: vertical or horizontal">
           <Segmented
             options={[
@@ -184,18 +193,23 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
           />
         </Tooltip>
         <Button
-          onClick={updatePreview}
+          onClick={() => updatePreview("none")}
+          disabled={state.loading || state.updating}
+        >
+          Update without ElevenLabs
+        </Button>
+        <Button
+          onClick={() => updatePreview("elevenlabs")}
           disabled={state.loading || state.updating}
           type="primary"
         >
-          Update
+          Update with ElevenLabs
         </Button>
         <Button
           disabled={state.loading || state.updating}
           hidden={!!state.error || !processedManuscripts.length}
           type="primary"
           onClick={() => {
-            updatePreview();
             state.downloadOpen = true;
           }}
         >
@@ -205,6 +219,16 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
           open={state.downloadOpen}
           setOpen={(open) => (state.downloadOpen = open)}
         />
+      </div>
+      <Typography.Text
+        type="secondary"
+        style={{ display: "block", textAlign: "center", marginTop: 10 }}
+      >
+        Standard preview bruker estimert timing og kaller ikke ElevenLabs. Kjør ElevenLabs bare
+        når du faktisk vil høre voiceoveren.
+      </Typography.Text>
+      <div className="mt-4">
+        <AIUsageDashboard projectId={generationId || tabs[0]?.projectId || undefined} compact />
       </div>
     </div>
   );

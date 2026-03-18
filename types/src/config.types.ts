@@ -70,6 +70,8 @@ const styleSchema = z.object({
     .optional(),
   photoCredits: z
     .object({
+      variant: z.enum(["vertical", "badge"]).optional(),
+      showIcon: z.boolean().optional(),
       container: z.string().optional(),
       text: z.string().optional(),
     })

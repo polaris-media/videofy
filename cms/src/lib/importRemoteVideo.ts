@@ -1,8 +1,9 @@
-import { access, mkdir, writeFile } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
-import { projectDir } from "@/lib/projectFiles";
+import { rm } from "node:fs/promises";
+import { getProjectStorage } from "@/lib/projectStorage";
 
 const DEFAULT_FILE_BASE_URL = "http://127.0.0.1:8001";
+const REMOTE_VIDEO_FETCH_TIMEOUT_MS = 60_000;
 
 function sanitizeAssetId(value: string): string {
   const normalized = value.trim().replace(/[^A-Za-z0-9._-]+/g, "-");
@@ -56,13 +57,13 @@ export async function importRemoteVideoToProject(params: {
   sourceUrl: string;
 }): Promise<{ relativePath: string; url: string }> {
   const { projectId, assetId, sourceUrl } = params;
-  const targetDir = join(projectDir(projectId), "input", "videos");
-
-  await mkdir(targetDir, { recursive: true });
+  const storage = getProjectStorage();
+  const targetDir = await storage.ensureProjectDir(projectId, "input", "videos");
 
   const response = await fetch(sourceUrl, {
     method: "GET",
     cache: "no-store",
+    signal: AbortSignal.timeout(REMOTE_VIDEO_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -79,11 +80,28 @@ export async function importRemoteVideoToProject(params: {
   const fileName = `${sanitizeAssetId(assetId || basename(sourceUrl))}${extension}`;
   const absolutePath = join(targetDir, fileName);
 
-  try {
-    await access(absolutePath);
-  } catch {
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    await writeFile(absolutePath, bytes);
+  if (await storage.fileExists(absolutePath)) {
+    await response.body?.cancel();
+  } else {
+    if (!response.body) {
+      throw new Error("Remote video response did not include a readable body");
+    }
+
+    try {
+      await storage.writeProjectFileFromStream(
+        projectId,
+        `input/videos/${fileName}`,
+        response.body
+      );
+    } catch (error) {
+      await rm(absolutePath, { force: true }).catch(() => undefined);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error(
+          `Timed out while downloading remote video after ${REMOTE_VIDEO_FETCH_TIMEOUT_MS}ms`
+        );
+      }
+      throw error;
+    }
   }
 
   return {

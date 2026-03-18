@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const NEWSROOMS_DIRECTORY_URL = "https://micro.fvn.no/newsrooms?extended";
+const EXTERNAL_FETCH_TIMEOUT_MS = 10_000;
 
 const newsroomSchema = z.object({
   name: z.string(),
@@ -23,6 +24,7 @@ export async function GET() {
         Accept: "application/json",
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(EXTERNAL_FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -40,7 +42,11 @@ export async function GET() {
     return NextResponse.json({ items });
   } catch (error) {
     const message =
-      error instanceof Error && error.message ? error.message : "Unexpected error";
+      error instanceof Error && error.name === "AbortError"
+        ? `Timed out while fetching Polaris newsrooms after ${EXTERNAL_FETCH_TIMEOUT_MS}ms`
+        : error instanceof Error && error.message
+          ? error.message
+          : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

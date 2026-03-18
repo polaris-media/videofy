@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -41,7 +42,7 @@ def _save_uploaded_file(
 ) -> UploadResponse:
     suffix = Path(file.filename or "upload.bin").suffix
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(file.file.read())
+        shutil.copyfileobj(file.file, tmp)
         tmp_path = Path(tmp.name)
 
     try:
@@ -103,6 +104,8 @@ def generate_project(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConfigResolverError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     logger.info(
         "[api] /generate finished for project '%s' (segments=%d)",
@@ -124,10 +127,16 @@ def process_project(
     state: AppState = Depends(get_state),
 ) -> GenerationResponse:
     try:
-        processed = state.pipeline.process_manuscript(project_id, payload.manuscript)
+        processed = state.pipeline.process_manuscript(
+            project_id,
+            payload.manuscript,
+            audio_mode=payload.audio_mode,
+        )
     except ProjectStoreError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConfigResolverError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return GenerationResponse(

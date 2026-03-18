@@ -4,10 +4,11 @@ import type { Config, ManuscriptType, MediaAssetType } from "@videofy/types";
 import { manuscriptSchema } from "@videofy/types";
 import sharp from "sharp";
 import { prepareManuscript } from "./prepareManuscript";
-import { getDataApiUrl } from "@/lib/backend";
+import { createJob, getJob } from "@/lib/jobsApi";
 
 const FALLBACK_IMAGE_SIZE = { width: 1080, height: 1080 };
 const GENERATE_TIMEOUT_MS = 180_000;
+const JOB_POLL_INTERVAL_MS = 1_000;
 
 type BackendLine = {
   text: string;
@@ -20,6 +21,7 @@ type BackendMedia = {
   url: string;
   byline?: string | null;
   description?: string | null;
+  displayMode?: "cover" | "contain-blur" | null;
   hotspot?: {
     x: number;
     y: number;
@@ -56,6 +58,7 @@ type BackendSegment = {
   mood: string;
   style: string;
   cameraMovement: string;
+  durationOverrideSeconds?: number | null;
   texts: BackendLine[];
   images?: BackendMedia[];
 };
@@ -227,6 +230,10 @@ async function mapBackendMediaToFrontendMedia(
     url: media.url,
     byline: toDefinedString(media.byline),
     description: toDefinedString(media.description),
+    displayMode:
+      media.displayMode === "contain-blur" || media.displayMode === "cover"
+        ? media.displayMode
+        : undefined,
     hotspot: normalizeHotspot(media.hotspot),
     imageAsset: {
       id: media.imageAsset?.id || media.path,
@@ -251,6 +258,7 @@ async function mapBackendSegmentToManuscriptSegment(segment: BackendSegment) {
     type: "segment",
     style: segment.style as "top" | "middle" | "bottom",
     text: segmentText,
+    durationOverrideSeconds: toDefinedNumber(segment.durationOverrideSeconds),
     texts: segment.texts.map((line) => ({
       type: "text",
       text: line.text,
@@ -301,26 +309,45 @@ async function buildManuscriptFromBackend(
 
 export const generateManuscript = async (
   projectId: string,
-  config: Config,
-  options?: {
-    model?: "gpt-4o" | "gpt-5.1" | "gpt-5.4";
-  }
+  config: Config
 ): Promise<ManuscriptType> => {
-  const generateUrl = `${getDataApiUrl()}/api/projects/${projectId}/generate`;
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), GENERATE_TIMEOUT_MS);
-  let response: Response;
   try {
-    response = await fetch(generateUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        script_prompt: config.manuscript.script_prompt,
-        model: options?.model,
-      }),
-      cache: "no-store",
-      signal: abortController.signal,
+    const job = await createJob({
+      kind: "generate-manuscript",
+      payload: {
+        projectId,
+      },
     });
+
+    while (true) {
+      if (abortController.signal.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
+
+      const snapshot = await getJob<{
+        manuscript_json?: BackendManuscript;
+      }>(job.jobId);
+
+      if (snapshot.status === "failed") {
+        throw new Error(snapshot.error || `Generating manuscript failed for project ${projectId}`);
+      }
+
+      if (snapshot.status === "completed") {
+        const payload = snapshot.result;
+        if (!payload?.manuscript_json) {
+          console.error(
+            `[cms.generate] Missing manuscript_json in job result for project '${projectId}'`
+          );
+          throw new Error("Backend did not return manuscript_json");
+        }
+
+        return buildManuscriptFromBackend(payload.manuscript_json, projectId);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, JOB_POLL_INTERVAL_MS));
+    }
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error(
@@ -331,27 +358,4 @@ export const generateManuscript = async (
   } finally {
     clearTimeout(timeoutId);
   }
-
-  if (!response.ok) {
-    const responseBody = await response.text();
-    console.error(
-      `[cms.generate] Generation request failed for project '${projectId}': ${responseBody}`
-    );
-    throw new Error(
-      `Generating manuscript failed for project ${projectId} (${response.status}): ${responseBody}`
-    );
-  }
-
-  const payload = (await response.json()) as {
-    manuscript_json?: BackendManuscript;
-  };
-
-  if (!payload.manuscript_json) {
-    console.error(
-      `[cms.generate] Missing manuscript_json in backend response for project '${projectId}'`
-    );
-    throw new Error("Backend did not return manuscript_json");
-  }
-
-  return buildManuscriptFromBackend(payload.manuscript_json, projectId);
 };
