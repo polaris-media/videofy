@@ -20,7 +20,6 @@ import { LoadingOutlined } from "@ant-design/icons";
 import { type FC, useMemo } from "react";
 import { useReactive } from "ahooks";
 import { useGlobalState } from "@/state/globalState";
-import { logAIData } from "@/actions/logAIData";
 import { createJob, getJob } from "@/lib/jobsApi";
 
 const videoTypes = [
@@ -256,10 +255,6 @@ const DownloadModal: FC<Props> = ({ open, setOpen }) => {
       }
 
       await renderLocally(values);
-
-      if (tabs.length > 0 && generationId) {
-        await logAIData(processedManuscripts, generationId);
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       state.error = message;
