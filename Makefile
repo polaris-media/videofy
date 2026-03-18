@@ -1,4 +1,4 @@
-.PHONY: help sync sync-hotspot install dev dev-api dev-cms stop-dev test test-api test-cms audit
+.PHONY: help sync sync-hotspot install dev dev-api dev-cms stop-dev test test-api test-cms test-live-download audit
 
 .DEFAULT_GOAL := help
 
@@ -27,6 +27,7 @@ help:
 	@echo "  stop-dev     Stop local listeners on ports 8001 and 3000"
 	@echo "  test-api     Run Python tests"
 	@echo "  test-cms     Run CMS typecheck and build"
+	@echo "  test-live-download Run opt-in live CMS vertical download regression test"
 	@echo "  test         Run all tests"
 	@echo "  audit        Run npm audit (critical)"
 	@echo ""
@@ -96,6 +97,9 @@ test-api: sync
 test-cms: install
 	npm run check-types:cms
 	npm run build:cms
+
+test-live-download: sync
+	$(UV_BIN) run pytest -q tests/test_live_cms_vertical_download.py
 
 test: test-api test-cms
 
