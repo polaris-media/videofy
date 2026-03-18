@@ -12,6 +12,7 @@ import {
 import { readStoredGenerationRecord } from "@/lib/generationRecord";
 import { resolveConfigForProject } from "@/lib/configResolver";
 import { detectProjectNewsroom } from "@/lib/newsroomBranding";
+import { normalizeProjectFileUrl } from "@/lib/projectFileUrl";
 
 const projectIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
 const FALLBACK_IMAGE_SIZE = { width: 1080, height: 1080 };
@@ -128,6 +129,11 @@ function toDefinedUrl(value: unknown): string | undefined {
   const maybeString = toDefinedString(value);
   if (!maybeString) {
     return undefined;
+  }
+
+  const normalizedProjectFileUrl = normalizeProjectFileUrl(maybeString);
+  if (normalizedProjectFileUrl.startsWith("/projects/")) {
+    return normalizedProjectFileUrl;
   }
 
   try {

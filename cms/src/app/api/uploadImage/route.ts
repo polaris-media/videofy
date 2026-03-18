@@ -3,6 +3,7 @@ import sharp from "sharp";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { dataApiFetch } from "@/lib/backend";
+import { normalizeProjectFileUrl } from "@/lib/projectFileUrl";
 
 const incomingSchema = z.object({
   file: z.instanceof(File),
@@ -79,7 +80,7 @@ export const POST = async (req: NextRequest) => {
     });
 
     return new Response(
-      JSON.stringify({ url: uploadPayload.url, image: result }),
+      JSON.stringify({ url: normalizeProjectFileUrl(uploadPayload.url), image: result }),
       {
         status: 200,
         headers: {

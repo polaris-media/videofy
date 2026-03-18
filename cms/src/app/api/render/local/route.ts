@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { playerSchema, processedManuscriptSchema } from "@videofy/types";
 import { z } from "zod";
 import { renderProjectVideo } from "@/lib/remotionRender";
+import { buildProjectFileUrl } from "@/lib/projectFileUrl";
 
 export const runtime = "nodejs";
 
@@ -44,7 +45,6 @@ export async function POST(request: Request) {
   try {
     const body = bodySchema.parse(await request.json());
     const orientations = resolveOrientations(body);
-    const fileBase = process.env.MINIMAL_FILE_BASE_URL || "http://127.0.0.1:8001";
 
     const downloads: RenderDownload[] = [];
     for (const orientation of orientations) {
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       downloads.push({
         kind: "combined",
         orientation,
-        downloadUrl: `${fileBase}/projects/${body.projectId}/files/output/render-${orientation}.mp4`,
+        downloadUrl: buildProjectFileUrl(body.projectId, `output/render-${orientation}.mp4`),
       });
 
       if (body.splitArticles && body.manuscripts.length > 1) {
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
             orientation,
             articleIndex: articleIndex + 1,
             articleTitle: manuscript.meta.title,
-            downloadUrl: `${fileBase}/projects/${body.projectId}/files/output/${outputFileName}`,
+            downloadUrl: buildProjectFileUrl(body.projectId, `output/${outputFileName}`),
           });
         }
       }

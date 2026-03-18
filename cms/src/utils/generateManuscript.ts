@@ -5,6 +5,12 @@ import { manuscriptSchema } from "@videofy/types";
 import sharp from "sharp";
 import { prepareManuscript } from "./prepareManuscript";
 import { createJob, getJob } from "@/lib/jobsApi";
+import { getDataApiUrl } from "@/lib/backend";
+import {
+  normalizeProjectFileStreamUrls,
+  normalizeProjectFileUrl,
+  resolveServerProjectFileUrl,
+} from "@/lib/projectFileUrl";
 
 const FALLBACK_IMAGE_SIZE = { width: 1080, height: 1080 };
 const GENERATE_TIMEOUT_MS = 180_000;
@@ -78,7 +84,9 @@ async function readImageSizeFromUrlOrFallback(
   url: string
 ): Promise<{ width: number; height: number }> {
   try {
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetch(resolveServerProjectFileUrl(url, getDataApiUrl()), {
+      cache: "no-store",
+    });
     if (!response.ok) {
       return FALLBACK_IMAGE_SIZE;
     }
@@ -165,6 +173,7 @@ function buildVideoAsset(
         )
       : sourceVideoAsset.streamUrls?.pseudostreaming ?? fallback.streamUrls.pseudostreaming ?? null,
   };
+  const normalizedStreamUrls = normalizeProjectFileStreamUrls(streamUrls);
 
   const mergedVideoAsset: {
     id: string;
@@ -181,7 +190,7 @@ function buildVideoAsset(
   } = {
     id,
     title,
-    streamUrls,
+    streamUrls: normalizedStreamUrls,
   };
 
   if (sourceVideoAsset.assetType === "audio" || sourceVideoAsset.assetType === "video") {
@@ -205,17 +214,18 @@ async function mapBackendMediaToFrontendMedia(
   media: BackendMedia
 ): Promise<MediaAssetType> {
   if (media.type === "video") {
+    const normalizedUrl = normalizeProjectFileUrl(media.url);
     const fallbackVideoAsset = {
       id: media.path,
       title: media.path,
       streamUrls: {
-        mp4: media.url,
+        mp4: normalizedUrl,
       },
     };
 
     return {
       type: "video",
-      url: media.url,
+      url: normalizedUrl,
       byline: toDefinedString(media.byline),
       description: toDefinedString(media.description),
       startFrom: toDefinedNumber(media.start_from),
@@ -224,10 +234,12 @@ async function mapBackendMediaToFrontendMedia(
     };
   }
 
-  const imageSize = media.imageAsset?.size || (await readImageSizeFromUrlOrFallback(media.url));
+  const normalizedUrl = normalizeProjectFileUrl(media.url);
+  const imageSize =
+    media.imageAsset?.size || (await readImageSizeFromUrlOrFallback(normalizedUrl));
   return {
     type: "image",
-    url: media.url,
+    url: normalizedUrl,
     byline: toDefinedString(media.byline),
     description: toDefinedString(media.description),
     displayMode:

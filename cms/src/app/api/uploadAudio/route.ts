@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { dataApiFetch } from "@/lib/backend";
+import { normalizeProjectFileUrl } from "@/lib/projectFileUrl";
 
 const incomingSchema = z.object({
   file: z.instanceof(File),
@@ -61,7 +62,7 @@ export const POST = async (req: NextRequest) => {
     }
     const payload = (await response.json()) as { url: string };
 
-    return new NextResponse(JSON.stringify({ url: payload.url }), {
+    return new NextResponse(JSON.stringify({ url: normalizeProjectFileUrl(payload.url) }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

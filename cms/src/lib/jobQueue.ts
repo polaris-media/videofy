@@ -2,6 +2,7 @@ import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { renderProjectVideo } from "@/lib/remotionRender";
 import { dataApiFetch } from "@/lib/backend";
 import { jobFilePath, jobsRoot, jobWorkerLockPath } from "@/lib/projectFiles";
+import { buildProjectFileUrl } from "@/lib/projectFileUrl";
 
 const JOB_LOCK_TTL_MS = 15 * 60 * 1000;
 
@@ -225,7 +226,6 @@ async function executeProcessJob(job: JobRecord<"process-manuscript">) {
 }
 
 async function executeRenderJob(job: JobRecord<"render-video">) {
-  const fileBase = process.env.MINIMAL_FILE_BASE_URL || "http://127.0.0.1:8001";
   const downloads: JobResultByKind["render-video"]["downloads"] = [];
 
   for (const orientation of job.payload.orientations) {
@@ -242,7 +242,7 @@ async function executeRenderJob(job: JobRecord<"render-video">) {
     downloads.push({
       kind: "combined",
       orientation,
-      downloadUrl: `${fileBase}/projects/${job.projectId}/files/output/render-${orientation}.mp4`,
+      downloadUrl: buildProjectFileUrl(job.projectId, `output/render-${orientation}.mp4`),
     });
 
     if (job.payload.splitArticles && job.payload.manuscripts.length > 1) {
@@ -281,7 +281,7 @@ async function executeRenderJob(job: JobRecord<"render-video">) {
           orientation,
           articleIndex: articleIndex + 1,
           articleTitle,
-          downloadUrl: `${fileBase}/projects/${job.projectId}/files/output/${outputFileName}`,
+          downloadUrl: buildProjectFileUrl(job.projectId, `output/${outputFileName}`),
         });
       }
     }

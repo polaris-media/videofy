@@ -1,8 +1,8 @@
 import { basename, extname, join } from "node:path";
 import { rm } from "node:fs/promises";
 import { getProjectStorage } from "@/lib/projectStorage";
+import { buildProjectFileUrl } from "@/lib/projectFileUrl";
 
-const DEFAULT_FILE_BASE_URL = "http://127.0.0.1:8001";
 const REMOTE_VIDEO_FETCH_TIMEOUT_MS = 60_000;
 
 function sanitizeAssetId(value: string): string {
@@ -36,15 +36,8 @@ function inferExtension(sourceUrl: string, contentType: string | null): string {
   return ".mp4";
 }
 
-function getFileBaseUrl(): string {
-  return (process.env.MINIMAL_FILE_BASE_URL || DEFAULT_FILE_BASE_URL).replace(
-    /\/$/,
-    ""
-  );
-}
-
 function buildProjectVideoUrl(projectId: string, fileName: string): string {
-  return `${getFileBaseUrl()}/projects/${projectId}/files/input/videos/${fileName}`;
+  return buildProjectFileUrl(projectId, `input/videos/${fileName}`);
 }
 
 export function isProjectVideoUrl(projectId: string, url: string): boolean {

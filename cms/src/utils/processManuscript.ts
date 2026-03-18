@@ -13,6 +13,10 @@ import {
   isProjectVideoUrl,
 } from "@/lib/importRemoteVideo";
 import { randomId } from "@/lib/randomId";
+import {
+  normalizeProjectFileStreamUrls,
+  normalizeProjectFileUrl,
+} from "@/lib/projectFileUrl";
 
 const FALLBACK_IMAGE_SIZE = {
   width: 1080,
@@ -184,6 +188,7 @@ function buildVideoAsset(
         )
       : sourceVideoAsset.streamUrls?.pseudostreaming ?? fallback.streamUrls.pseudostreaming ?? null,
   };
+  const normalizedStreamUrls = normalizeProjectFileStreamUrls(streamUrls);
 
   const mergedVideoAsset: {
     id: string;
@@ -200,7 +205,7 @@ function buildVideoAsset(
   } = {
     id,
     title,
-    streamUrls,
+    streamUrls: normalizedStreamUrls,
   };
 
   if (sourceVideoAsset.assetType === "audio" || sourceVideoAsset.assetType === "video") {
@@ -456,17 +461,18 @@ function mapBackendMediaToProcessedMedia(media: BackendMedia) {
   }
 
   if (media.type === "video") {
+    const normalizedUrl = media.url ? normalizeProjectFileUrl(media.url) : "";
     const fallbackVideoAsset = {
       id: media.path || randomId(),
       title: media.path || "video",
       streamUrls: {
-        mp4: media.url,
+        mp4: normalizedUrl,
       },
     };
 
     return {
       type: "video" as const,
-      url: media.url,
+      url: normalizedUrl,
       byline: toDefinedString(media.byline),
       description: toDefinedString(media.description),
       changedId: toDefinedString(media.changedId),
@@ -478,7 +484,7 @@ function mapBackendMediaToProcessedMedia(media: BackendMedia) {
 
   return {
     type: "image" as const,
-    url: media.url || "",
+    url: media.url ? normalizeProjectFileUrl(media.url) : "",
     byline: toDefinedString(media.byline),
     description: toDefinedString(media.description),
     displayMode:
