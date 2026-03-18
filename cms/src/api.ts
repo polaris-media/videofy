@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
-import { Config, VideoType } from "@videofy/types";
+import { Config, ManuscriptType, ProcessedManuscript, VideoType } from "@videofy/types";
 
 export type ProjectOption = {
   id: string;
@@ -297,6 +297,28 @@ export const saveProjectConfig = async (
     projectId,
     config,
   });
+};
+
+export const generateProjectManuscript = async (
+  projectId: string
+): Promise<ManuscriptType> => {
+  const response = await axios.post<{ manuscript: ManuscriptType }>(
+    "/api/manuscripts/generate",
+    { projectId }
+  );
+  return response.data.manuscript;
+};
+
+export const processProjectManuscript = async (payload: {
+  manuscript: ManuscriptType;
+  projectId: string;
+  audioMode?: "none" | "elevenlabs";
+}): Promise<ProcessedManuscript> => {
+  const response = await axios.post<{ processed: ProcessedManuscript }>(
+    "/api/manuscripts/process",
+    payload
+  );
+  return response.data.processed;
 };
 
 export const getNewsroomBranding = async (

@@ -4,8 +4,13 @@ import { useEffect, useMemo, type FC } from "react";
 import { useReactive } from "ahooks";
 import { App, Button, Form, Input, Modal, Select, Spin, Typography } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
-import { runFetcherPlugin, saveProjectConfig, setProjectBrand, useFetchers } from "@/api";
-import { generateManuscript } from "@/utils/generateManuscript";
+import {
+  generateProjectManuscript,
+  runFetcherPlugin,
+  saveProjectConfig,
+  setProjectBrand,
+  useFetchers,
+} from "@/api";
 import { Tab, useGlobalState } from "@/state/globalState";
 import PolarisArticleAssist from "@/components/FetcherFields/PolarisArticleAssist";
 import {
@@ -192,7 +197,7 @@ const AddFetchedArticle: FC<AddFetchedArticleProps> = ({
           await saveProjectConfig(fetchResult.projectId, customizedConfig);
 
           state.loadingMessage = `Generating ${targetIndex + 1}/${fetchTargets.length}...`;
-          const manuscript = await generateManuscript(fetchResult.projectId, customizedConfig);
+          const manuscript = await generateProjectManuscript(fetchResult.projectId);
           const cleanedManuscript = {
             ...manuscript,
             meta: {

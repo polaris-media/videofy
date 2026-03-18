@@ -1,6 +1,6 @@
 "use client";
 import type { processedManuscriptSchema } from "@videofy/types";
-import { processManuscript } from "@/utils/processManuscript";
+import { processProjectManuscript } from "@/api";
 import type { PlayerRef } from "@remotion/player";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useReactive } from "ahooks";
@@ -68,13 +68,9 @@ const PreviewOutput = ({ tabs }: { tabs: Tab[] }) => {
         }
         const results = await Promise.all(
           tabs.map((tab) => {
-            return processManuscript({
-              abortController: abortController.current,
+            return processProjectManuscript({
               manuscript: tab.manuscript,
-              config: config,
-              uniqueId: tab.manuscript.meta.uniqueId!,
               projectId: tab.projectId || generationId || tab.articleUrl,
-              backendGenerationId: tab.backendGenerationId,
               audioMode,
             });
           })

@@ -4,9 +4,8 @@ import { Tabs, Input, Button, Upload, Alert, App, Empty, Flex, Spin } from "antd
 import type { UploadFile } from "antd/es/upload/interface";
 import { LoadingOutlined, UploadOutlined } from "@ant-design/icons";
 import { type Config, appConfigSchema } from "@videofy/types";
-import { useProjectAssets } from "@/api";
+import { saveProjectConfig, useProjectAssets } from "@/api";
 import { useGlobalState } from "../../state/globalState";
-import { saveConfig as saveConfigAction } from "@/actions/configActions";
 
 const { TextArea } = Input;
 
@@ -68,18 +67,9 @@ const EditConfig: React.FC = () => {
     }
 
     try {
-      const result = await saveConfigAction({
-        projectId: selectedProject.id,
-        config: parsedConfigData,
-      });
-      if (result.success) {
-        setConfig({ projectId: selectedProject.id, config: parsedConfigData });
-        state.saveSuccessMessage =
-          result.message || "Config saved successfully!";
-      } else {
-        state.validationError =
-          result.error || "Failed to save config to server.";
-      }
+      await saveProjectConfig(selectedProject.id, parsedConfigData);
+      setConfig({ projectId: selectedProject.id, config: parsedConfigData });
+      state.saveSuccessMessage = "Config saved successfully!";
     } catch (serverError) {
       console.error("Error calling saveConfig action:", serverError);
       state.validationError =

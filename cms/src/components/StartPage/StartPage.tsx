@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useReactive } from "ahooks";
-import { generateManuscript } from "@/utils/generateManuscript";
 import { useGlobalState } from "@/state/globalState";
 import { Config } from "@videofy/types";
 import Cookies from "universal-cookie";
@@ -24,6 +23,7 @@ import {
 import { useRouter } from "next/navigation";
 import {
   getBrands,
+  generateProjectManuscript,
   getPolarisNewsrooms,
   getProjectConfig,
   type PolarisNewsroomItem,
@@ -491,7 +491,7 @@ const StartPage = ({ initialNewsroom }: { initialNewsroom?: string }) => {
       const tabsData: Array<{
         articleUrl: string;
         projectId: string;
-        manuscript: Awaited<ReturnType<typeof generateManuscript>>;
+        manuscript: Awaited<ReturnType<typeof generateProjectManuscript>>;
       }> = [];
       const failedTargets: string[] = [];
       const failureMessages: string[] = [];
@@ -557,7 +557,7 @@ const StartPage = ({ initialNewsroom }: { initialNewsroom?: string }) => {
           }
 
           state.loadingMessage = `Generating ${targetIndex + 1}/${fetchTargets.length}...`;
-          const manuscript = await generateManuscript(fetchResult.projectId, customizedConfig);
+          const manuscript = await generateProjectManuscript(fetchResult.projectId);
 
           if (!manuscript) {
             throw new Error("Backend did not return a manuscript");
