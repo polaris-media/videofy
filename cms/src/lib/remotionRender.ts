@@ -3,6 +3,7 @@ import path from "node:path";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { getProjectStorage } from "@/lib/projectStorage";
+import { absolutizeProjectFileUrls } from "@/lib/projectFileUrl";
 
 export type RenderOrientation = "vertical" | "horizontal";
 
@@ -22,6 +23,10 @@ type RenderInput = {
 };
 
 let bundlePromise: Promise<string> | undefined;
+
+function getCmsRenderBaseUrl(): string {
+  return (process.env.NEXT_PUBLIC_CMS_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
+}
 
 function resolveEntryPoint(): string {
   // Remotion bundle() must point to the file that calls registerRoot().
@@ -60,10 +65,11 @@ export function prewarmRemotionBundle(): void {
 export async function renderProjectVideo(input: RenderInput): Promise<string> {
   const width = input.orientation === "vertical" ? 1080 : 1920;
   const height = input.orientation === "vertical" ? 1920 : 1080;
+  const cmsRenderBaseUrl = getCmsRenderBaseUrl();
 
   const inputProps = {
-    manuscripts: input.manuscripts,
-    playerConfig: input.playerConfig,
+    manuscripts: absolutizeProjectFileUrls(input.manuscripts, cmsRenderBaseUrl),
+    playerConfig: absolutizeProjectFileUrls(input.playerConfig, cmsRenderBaseUrl),
     width,
     height,
     voice: input.voice,

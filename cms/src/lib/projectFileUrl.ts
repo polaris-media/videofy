@@ -120,3 +120,48 @@ export function resolveServerProjectFileUrl(url: string, dataApiBaseUrl: string)
 
   return `${dataApiBaseUrl.replace(/\/$/, "")}${normalizedUrl}`;
 }
+
+export function resolveProjectFileUrl(url: string, baseUrl: string): string {
+  const normalizedUrl = normalizeProjectFileUrl(url);
+  if (!isProjectFilePath(normalizedUrl)) {
+    return url;
+  }
+
+  return `${baseUrl.replace(/\/$/, "")}${normalizedUrl}`;
+}
+
+type JsonLike =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonLike[]
+  | { [key: string]: JsonLike };
+
+export function absolutizeProjectFileUrls<T>(value: T, baseUrl: string): T {
+  const visit = (current: JsonLike): JsonLike => {
+    if (typeof current === "string") {
+      return resolveProjectFileUrl(current, baseUrl);
+    }
+
+    if (Array.isArray(current)) {
+      return current.map((item) => visit(item));
+    }
+
+    if (current && typeof current === "object") {
+      return Object.fromEntries(
+        Object.entries(current).map(([key, child]) => {
+          if (key === "assetBaseUrl" && child === ".") {
+            return [key, baseUrl];
+          }
+
+          return [key, visit(child)];
+        })
+      );
+    }
+
+    return current;
+  };
+
+  return visit(value as JsonLike) as T;
+}
