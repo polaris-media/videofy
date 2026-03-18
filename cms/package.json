@@ -31,7 +31,7 @@
     "antd-style": "^4.1.0",
     "axios": "1.13.6",
     "maplibre-gl": "^5.19.0",
-    "next": "^16.1.6",
+    "next": "^16.1.7",
     "next-plugin-yaml": "1.0.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
