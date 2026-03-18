@@ -42,8 +42,7 @@ export const buildDefaultConfig = (projectId: string): Config => ({
   },
   player: {
     logo: "/assets/logo.svg",
-    assetBaseUrl:
-      process.env.NEXT_PUBLIC_CMS_BASE_URL || "http://127.0.0.1:3000",
+    assetBaseUrl: ".",
     logoStyle: "position: absolute; top: 88px; right: 52px; width: 78px; opacity: 0.6;",
     progress: {
       placement: "left",

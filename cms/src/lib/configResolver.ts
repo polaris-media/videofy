@@ -182,8 +182,7 @@ export async function resolveConfigForProject(
   config.player = {
     ...(config.player || {}),
     logo: config.player?.logo || "/assets/logo.svg",
-    assetBaseUrl:
-      process.env.NEXT_PUBLIC_CMS_BASE_URL || "http://127.0.0.1:3000",
+    assetBaseUrl: ".",
   };
 
   if (merged.exportDefaults && typeof merged.exportDefaults === "object") {
@@ -193,8 +192,7 @@ export async function resolveConfigForProject(
     ) as Config["exportDefaults"];
   }
 
-  const fileBase = process.env.MINIMAL_FILE_BASE_URL || "http://127.0.0.1:8001";
-  config.default_assets_base_url = `${fileBase}/projects/${projectId}/files/input`;
+  config.default_assets_base_url = `/projects/${projectId}/files/input`;
 
   if (override && Object.keys(override).length > 0) {
     return deepMerge(config as unknown as Record<string, unknown>, override) as unknown as Config;
