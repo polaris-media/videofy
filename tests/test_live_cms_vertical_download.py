@@ -41,9 +41,17 @@ def _request(
 
     try:
         with urlopen(request, timeout=timeout) as response:
-            return response.status, response.read(), dict(response.headers.items())
+            return (
+                response.status,
+                response.read(),
+                {key.lower(): value for key, value in response.headers.items()},
+            )
     except HTTPError as error:
-        return error.code, error.read(), dict(error.headers.items())
+        return (
+            error.code,
+            error.read(),
+            {key.lower(): value for key, value in error.headers.items()},
+        )
 
 
 def _request_json(
@@ -255,4 +263,7 @@ def test_live_two_article_story_can_download_vertical_without_elevenlabs():
         "body": download_body.decode("utf-8", errors="ignore"),
     }
     assert len(download_body) > 0
-    assert "video" in download_headers.get("Content-Type", "").lower()
+    assert download_headers.get("accept-ranges") == "bytes", download_headers
+    assert int(download_headers.get("content-length", "0")) > 0, download_headers
+    if download_status == 206:
+        assert "bytes " in download_headers.get("content-range", "").lower(), download_headers
