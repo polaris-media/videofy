@@ -594,6 +594,20 @@ function mergeRetiredProjectIds(
   return merged.length > 0 ? merged : undefined;
 }
 
+function normalizeConfigAssetBases(
+  projectId: string,
+  config: GenerationConfig
+): GenerationConfig {
+  return {
+    ...config,
+    player: {
+      ...(config.player || {}),
+      assetBaseUrl: ".",
+    },
+    default_assets_base_url: `/projects/${projectId}/files/input`,
+  };
+}
+
 async function readManifest(projectId: string) {
   return readJson<{
     projectId: string;
@@ -756,7 +770,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ...normalizedGeneration,
       data: normalizedTabs,
-      config: resolvedConfig,
+      config: normalizeConfigAssetBases(projectId, resolvedConfig),
       newsroom: await detectProjectNewsroom(projectId),
     });
   } catch (error) {
