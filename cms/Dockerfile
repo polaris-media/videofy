@@ -7,7 +7,12 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:0.8.22 /uv /uvx /bin/
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 python3-pip ffmpeg \
+    && apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        ffmpeg \
+        libnspr4 \
+        libnss3 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml uv.lock ./
