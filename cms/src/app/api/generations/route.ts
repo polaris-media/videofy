@@ -9,6 +9,7 @@ import {
   readJson,
   writeJson,
 } from "@/lib/projectFiles";
+import { readStoredGenerationRecord } from "@/lib/generationRecord";
 import { resolveConfigForProject } from "@/lib/configResolver";
 import { detectProjectNewsroom } from "@/lib/newsroomBranding";
 
@@ -695,20 +696,16 @@ export async function GET(req: NextRequest) {
   if (!id) {
     try {
       const projectIds = await listProjectIds();
-      const generations = await Promise.all(
-        projectIds.map((projectId) =>
-          readJson<(GenerationRecord & { config?: GenerationConfig }) | null>(
-            cmsGenerationPath(projectId),
-            null
-          )
-        )
-      );
+      const generations = await Promise.all(projectIds.map(readStoredGenerationRecord));
 
       const summaryRecords = (
         await Promise.all(
           generations.map(async (generation) =>
             generation
-              ? stripLegacyConfigFromGeneration(generation.projectId, generation)
+              ? stripLegacyConfigFromGeneration(
+                  generation.projectId,
+                  generation as GenerationRecord & { config?: GenerationConfig }
+                )
               : null
           )
         )
@@ -729,16 +726,16 @@ export async function GET(req: NextRequest) {
 
   try {
     const projectId = normalizeId(id);
-    const generation = await readJson<(GenerationRecord & { config?: GenerationConfig }) | null>(
-      cmsGenerationPath(projectId),
-      null
-    );
+    const generation = await readStoredGenerationRecord(projectId);
 
     if (!generation) {
       return NextResponse.json({ error: "Generation not found" }, { status: 404 });
     }
 
-    const normalizedGeneration = await stripLegacyConfigFromGeneration(projectId, generation);
+    const normalizedGeneration = await stripLegacyConfigFromGeneration(
+      projectId,
+      generation as GenerationRecord & { config?: GenerationConfig }
+    );
 
     const manifest = await readManifest(projectId);
     const resolvedConfig =
@@ -770,13 +767,13 @@ export async function PUT(req: NextRequest) {
     const projectId = normalizeId(body.id);
     const normalizedTabs = normalizeGenerationTabs(body.data);
 
-    const existing = await readJson<(GenerationRecord & { config?: GenerationConfig }) | null>(
-      cmsGenerationPath(projectId),
-      null
-    );
+    const existing = await readStoredGenerationRecord(projectId);
 
     const normalizedExisting = existing
-      ? await stripLegacyConfigFromGeneration(projectId, existing)
+      ? await stripLegacyConfigFromGeneration(
+          projectId,
+          existing as GenerationRecord & { config?: GenerationConfig }
+        )
       : existing;
 
     if (!existing) {

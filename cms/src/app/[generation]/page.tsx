@@ -1,7 +1,6 @@
 import EditPage from "@/components/EditPage/EditPage";
 import StartPage from "@/components/StartPage/StartPage";
-import { cmsGenerationPath, readJson } from "@/lib/projectFiles";
-import { getProjectStorage } from "@/lib/projectStorage";
+import { readStoredGenerationRecord } from "@/lib/generationRecord";
 
 type PageProps = {
   params: Promise<{
@@ -16,15 +15,9 @@ const Page = async ({ params }: PageProps) => {
   const slug = decodeURIComponent(generation || "").trim();
 
   if (GENERATION_ID_PATTERN.test(slug)) {
-    const generationFile = cmsGenerationPath(slug);
-    if (await getProjectStorage().fileExists(generationFile)) {
-      const generationRecord = await readJson<Record<string, unknown> | null>(
-        generationFile,
-        null
-      );
-      if (generationRecord && typeof generationRecord === "object") {
-        return <EditPage />;
-      }
+    const generationRecord = await readStoredGenerationRecord(slug);
+    if (generationRecord && typeof generationRecord === "object") {
+      return <EditPage />;
     }
   }
 

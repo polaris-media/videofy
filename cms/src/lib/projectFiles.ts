@@ -60,6 +60,10 @@ export function cmsGenerationPath(projectId: string): string {
   return join(projectDir(projectId), "working", "cms-generation.json");
 }
 
+export function workingManuscriptPath(projectId: string): string {
+  return join(projectDir(projectId), "working", "manuscript.json");
+}
+
 export function configOverridePath(projectId: string): string {
   return join(projectDir(projectId), "working", "config.override.json");
 }
