@@ -5,6 +5,26 @@ import {
 } from "./constants.types";
 import { z } from "zod";
 
+const projectAssetUrlSchema = z.string().refine(
+  (value) => {
+    if (typeof value !== "string" || !value.trim()) {
+      return false;
+    }
+
+    if (/^\/projects\/[A-Za-z0-9][A-Za-z0-9._-]*\/files\/.+/.test(value)) {
+      return true;
+    }
+
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: "Invalid URL" }
+);
+
 const locationSchema = z.object({
   lat: z.number(),
   lon: z.number(),
@@ -23,10 +43,10 @@ export const videoAssetSchema = z.object({
   duration: z.number().optional(),
   title: z.string(),
   streamUrls: z.object({
-    hls: z.string().url().nullable().optional(),
-    hds: z.string().url().nullable().optional(),
-    mp4: z.string().url().nullable().optional(),
-    pseudostreaming: z.array(z.string().url()).optional().nullable(),
+    hls: projectAssetUrlSchema.nullable().optional(),
+    hds: projectAssetUrlSchema.nullable().optional(),
+    mp4: projectAssetUrlSchema.nullable().optional(),
+    pseudostreaming: z.array(projectAssetUrlSchema).optional().nullable(),
   }),
 });
 
@@ -57,7 +77,7 @@ export const imageSchema = z.object({
   description: z.string().optional(),
   displayMode: z.enum(["cover", "contain-blur"]).optional(),
   imageAsset: imageAssetSchema,
-  url: z.string().url(),
+  url: projectAssetUrlSchema,
   hotspot: hotspotSchema.optional(),
 });
 
@@ -71,7 +91,7 @@ export const videoSchema = z.object({
   startFrom: z.number().optional(),
   endAt: z.number().optional(),
   byline: z.string().optional(),
-  url: z.string().url(),
+  url: projectAssetUrlSchema,
 });
 
 export type VideoType = z.infer<typeof videoSchema>;

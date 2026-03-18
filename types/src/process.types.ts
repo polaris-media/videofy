@@ -7,6 +7,26 @@ import {
   videoAssetSchema,
 } from "./manuscript.types";
 
+const projectAssetUrlSchema = z.string().refine(
+  (value) => {
+    if (typeof value !== "string" || !value.trim()) {
+      return false;
+    }
+
+    if (/^\/projects\/[A-Za-z0-9][A-Za-z0-9._-]*\/files\/.+/.test(value)) {
+      return true;
+    }
+
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: "Invalid URL" }
+);
+
 const hotspotSchema = z.object({
   x: z.number(),
   y: z.number(),
@@ -34,7 +54,7 @@ const imageSchema = z.object({
   description: z.string().optional(),
   displayMode: z.enum(["cover", "contain-blur"]).optional(),
   imageAsset: imageAssetSchema,
-  url: z.string().url(),
+  url: projectAssetUrlSchema,
   hotspot: hotspotSchema.optional(),
 });
 
@@ -46,7 +66,7 @@ const videoSchema = z.object({
   startFrom: z.number().optional(),
   endAt: z.number().optional(),
   byline: z.string().optional(),
-  url: z.string().url(),
+  url: projectAssetUrlSchema,
 });
 
 export const processedManuscriptSchema = z.object({
