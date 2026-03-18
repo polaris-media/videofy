@@ -13,6 +13,10 @@ import {
   resolveGenerationModel,
   type GenerationModel,
 } from "@/lib/openaiModels";
+import {
+  parseArticleRefInput,
+  parseArticleRefsInput,
+} from "@/lib/polarisArticleInputs";
 
 type FormType = {
   fetcherId: string;
@@ -46,6 +50,8 @@ const AddFetchedArticle: FC<AddFetchedArticleProps> = ({
   });
 
   const selectedFetcherId = Form.useWatch("fetcherId", form);
+  const selectedArticleRef = Form.useWatch(["inputs", "article_ref"], form);
+  const selectedArticleRefs = Form.useWatch(["inputs", "article_refs"], form);
   const selectedFetcher = useMemo(
     () => fetchers?.find((fetcher) => fetcher.id === selectedFetcherId),
     [fetchers, selectedFetcherId]
@@ -111,17 +117,16 @@ const AddFetchedArticle: FC<AddFetchedArticleProps> = ({
     state.loadingMessage = "Fetching article...";
     try {
       const rawInputs = values.inputs || {};
+      const watchedArticleRefs = parseArticleRefsInput(selectedArticleRefs);
       const articleRefs =
         values.fetcherId === "polaris-capi"
-          ? Array.isArray(rawInputs.article_refs)
-            ? rawInputs.article_refs
-                .filter((value): value is string => typeof value === "string")
-                .map((value) => value.trim())
-                .filter(Boolean)
-            : []
+          ? (() => {
+              const fromSubmit = parseArticleRefsInput(rawInputs.article_refs);
+              return fromSubmit.length > 0 ? fromSubmit : watchedArticleRefs;
+            })()
           : [];
       const manualArticleRef =
-        typeof rawInputs.article_ref === "string" ? rawInputs.article_ref.trim() : "";
+        parseArticleRefInput(rawInputs.article_ref) || parseArticleRefInput(selectedArticleRef);
 
       if (values.fetcherId === "polaris-capi" && articleRefs.length === 0 && !manualArticleRef) {
         throw new Error("Select one or more articles, or paste a Polaris article URL.");
@@ -153,6 +158,7 @@ const AddFetchedArticle: FC<AddFetchedArticleProps> = ({
 
       const addedTabs: Tab[] = [];
       const failedTargets: string[] = [];
+      const failureMessages: string[] = [];
 
       for (const [targetIndex, articleRef] of fetchTargets.entries()) {
         const fetchLabel =
@@ -203,11 +209,18 @@ const AddFetchedArticle: FC<AddFetchedArticleProps> = ({
         } catch (error) {
           console.error(`[add-article] Failed to fetch target '${fetchLabel}':`, error);
           failedTargets.push(fetchLabel);
+          failureMessages.push(
+            error instanceof Error ? `${fetchLabel}: ${error.message}` : fetchLabel
+          );
         }
       }
 
       if (addedTabs.length === 0) {
-        throw new Error("Failed to add the selected article(s).");
+        throw new Error(
+          failureMessages[0]
+            ? `Failed to add the selected article(s). ${failureMessages[0]}`
+            : "Failed to add the selected article(s)."
+        );
       }
 
       await onChange(addedTabs);

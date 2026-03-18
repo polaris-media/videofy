@@ -277,7 +277,7 @@ const PolarisArticleAssist = ({
         hideNewsroomSelect ? (
           <Form.Item label="Artikler" style={{ marginBottom: 0 }}>
             <Form.Item name={["inputs", "article_refs"]} hidden>
-              <Input />
+              <Select mode="multiple" options={[]} />
             </Form.Item>
             <div className="max-h-[560px] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2">
               <div className="grid gap-2">

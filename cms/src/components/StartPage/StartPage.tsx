@@ -23,15 +23,15 @@ import {
 } from "antd";
 import { useRouter } from "next/navigation";
 import {
-    getBrands,
-    getPolarisNewsrooms,
-    getProjectConfig,
-    type PolarisNewsroomItem,
-    runFetcherPlugin,
-    saveProjectConfig,
-    setProjectBrand,
-    useBrands,
-    useFetchers,
+  getBrands,
+  getPolarisNewsrooms,
+  getProjectConfig,
+  type PolarisNewsroomItem,
+  runFetcherPlugin,
+  saveProjectConfig,
+  setProjectBrand,
+  useBrands,
+  useFetchers,
   useGenerations,
 } from "@/api";
 import { LoadingOutlined } from "@ant-design/icons";
@@ -43,6 +43,10 @@ import {
   resolveGenerationModel,
   type GenerationModel,
 } from "@/lib/openaiModels";
+import {
+  parseArticleRefInput,
+  parseArticleRefsInput,
+} from "@/lib/polarisArticleInputs";
 
 const { Title, Paragraph } = Typography;
 const cookies = new Cookies();
@@ -433,6 +437,7 @@ const StartPage = ({ initialNewsroom }: { initialNewsroom?: string }) => {
     state.loadingMessage = "Fetching article...";
     try {
       const rawInputs = values.inputs || {};
+      const watchedArticleRefs = parseArticleRefsInput(selectedArticleRefs);
       const resolvedNewsroom =
         fetcherId === "polaris-capi"
           ? typeof rawInputs.newsroom === "string" && rawInputs.newsroom.trim().length > 0
@@ -443,15 +448,13 @@ const StartPage = ({ initialNewsroom }: { initialNewsroom?: string }) => {
           : "";
       const articleRefs =
         fetcherId === "polaris-capi"
-          ? Array.isArray(rawInputs.article_refs)
-            ? rawInputs.article_refs
-                .filter((value): value is string => typeof value === "string")
-                .map((value) => value.trim())
-                .filter(Boolean)
-            : []
+          ? (() => {
+              const fromSubmit = parseArticleRefsInput(rawInputs.article_refs);
+              return fromSubmit.length > 0 ? fromSubmit : watchedArticleRefs;
+            })()
           : [];
       const manualArticleRef =
-        typeof rawInputs.article_ref === "string" ? rawInputs.article_ref.trim() : "";
+        parseArticleRefInput(rawInputs.article_ref) || parseArticleRefInput(selectedArticleRef);
 
       if (fetcherId === "polaris-capi" && articleRefs.length === 0 && !manualArticleRef) {
         throw new Error("Select one or more articles, or paste a Polaris article URL.");
@@ -490,6 +493,7 @@ const StartPage = ({ initialNewsroom }: { initialNewsroom?: string }) => {
         manuscript: Awaited<ReturnType<typeof generateManuscript>>;
       }> = [];
       const failedTargets: string[] = [];
+      const failureMessages: string[] = [];
       let primaryProject:
         | {
             id: string;
@@ -573,11 +577,18 @@ const StartPage = ({ initialNewsroom }: { initialNewsroom?: string }) => {
         } catch (error) {
           console.error(`[start-page] Failed to fetch target '${fetchLabel}':`, error);
           failedTargets.push(fetchLabel);
+          failureMessages.push(
+            error instanceof Error ? `${fetchLabel}: ${error.message}` : fetchLabel
+          );
         }
       }
 
       if (tabsData.length === 0 || !primaryProject || !primaryConfigRow) {
-        throw new Error("Failed to add the selected article(s).");
+        throw new Error(
+          failureMessages[0]
+            ? `Failed to add the selected article(s). ${failureMessages[0]}`
+            : "Failed to add the selected article(s)."
+        );
       }
 
       setSelectedProject(primaryProject);
