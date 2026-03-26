@@ -12,8 +12,13 @@ export async function dataApiFetch(
   init?: RequestInit
 ): Promise<Response> {
   const url = `${getDataApiUrl()}${path.startsWith("/") ? path : `/${path}`}`;
-  return fetch(url, {
-    ...init,
-    cache: "no-store",
-  });
+  try {
+    return await fetch(url, {
+      ...init,
+      cache: "no-store",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown fetch error";
+    throw new Error(`Data API request failed for ${url}: ${message}`);
+  }
 }
