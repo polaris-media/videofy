@@ -137,10 +137,11 @@ docker compose up --build
 ```
 
 Docker Compose reads the same local `.env` file for values such as `OPENAI_API_KEY` and `ELEVENLABS_API_KEY`.
+By default, Docker Compose publishes the API on host port `8002` via `MINIMAL_API_HOST_PORT` to avoid collisions with local LLM servers that often use `8001`.
 
 Open:
 - CMS: `http://127.0.0.1:3000`
-- API: `http://127.0.0.1:8001`
+- API: `http://127.0.0.1:8002`
 
 ## Projects and Folder Structure
 

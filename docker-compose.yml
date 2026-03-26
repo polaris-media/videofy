@@ -5,14 +5,14 @@ services:
       dockerfile: api/Dockerfile
     hostname: api
     environment:
-      APP_BASE_URL: http://localhost:8001
+      APP_BASE_URL: http://localhost:${MINIMAL_API_HOST_PORT:-8002}
       PROJECTS_ROOT: projects
       CONFIG_ROOT: brands
       CORS_ALLOW_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
     ports:
-      - "8001:8001"
+      - "${MINIMAL_API_HOST_PORT:-8002}:8001"
     networks:
       default:
         aliases:
@@ -30,7 +30,7 @@ services:
       dockerfile: cms/Dockerfile
     environment:
       MINIMAL_DATA_API_URL: http://api:8001
-      MINIMAL_FILE_BASE_URL: http://localhost:8001
+      MINIMAL_FILE_BASE_URL: http://localhost:${MINIMAL_API_HOST_PORT:-8002}
       NEXT_PUBLIC_CMS_BASE_URL: http://localhost:3000
       CAPI_USERNAME: ${CAPI_USERNAME:-}
       CAPI_PASSWORD: ${CAPI_PASSWORD:-}
