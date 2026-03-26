@@ -143,6 +143,73 @@ Open:
 - CMS: `http://127.0.0.1:3000`
 - API: `http://127.0.0.1:8002`
 
+### Deploying Updates On A Docker Host
+
+For a host such as `spark-bcb9`, where the app is run via Docker Compose from a checked-out repo:
+
+```bash
+cd /home/fvn/videofy
+git pull --ff-only origin main
+docker compose up -d --build --force-recreate api cms
+```
+
+What this does:
+- pulls the latest code from GitHub
+- rebuilds both images from the current checkout
+- recreates the `api` and `cms` containers so changed code and env wiring take effect
+
+Expected host ports after deploy:
+- CMS: `3000`
+- API: `8002`
+
+The API still listens on container port `8001` internally. The CMS container talks to it over Docker networking at `http://api:8001`.
+
+### Verifying A Deploy
+
+After `docker compose up -d --build --force-recreate api cms`, check:
+
+```bash
+docker compose ps
+curl -fsS http://127.0.0.1:8002/health
+curl -fsS http://127.0.0.1:3000/api/fetchers
+```
+
+Expected results:
+- `docker compose ps` shows both `api` and `cms` as running
+- `http://127.0.0.1:8002/health` returns `{"status":"ok"}`
+- `http://127.0.0.1:3000/api/fetchers` returns JSON with available fetchers
+
+### Troubleshooting Docker Deploys
+
+Useful commands:
+
+```bash
+docker compose ps
+docker logs --tail 100 videofy-api-1
+docker logs --tail 100 videofy-cms-1
+docker inspect videofy-api-1 --format '{{json .NetworkSettings.Networks}}'
+docker inspect videofy-cms-1 --format '{{json .NetworkSettings.Networks}}'
+```
+
+Common failure modes:
+- `failed to bind host port ... 8001`: another service is already using host port `8001`. Docker Compose should use host port `8002` by default via `MINIMAL_API_HOST_PORT`.
+- `ENOTFOUND api` or `fetch failed` in CMS logs: the `api` container is not attached correctly to the Compose network, or the API container failed to start.
+- CMS works but article generation fails: check `videofy-api-1` logs first, then verify `curl http://127.0.0.1:8002/health`.
+
+### Updating Only Environment Variables
+
+If you only changed `.env` or Compose wiring, you still need to recreate the containers:
+
+```bash
+docker compose up -d --force-recreate api cms
+```
+
+If you changed code, use the full rebuild command:
+
+```bash
+docker compose up -d --build --force-recreate api cms
+```
+
 ## Projects and Folder Structure
 
 Every run is stored as a project in `projects/<projectId>/`.
